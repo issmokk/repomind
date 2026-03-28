@@ -47,6 +47,7 @@
     "jsdom": "^29.0.1",
     "prettier": "^3.8.1",
     "tailwindcss": "^4",
+    "tree-sitter-wasm-prebuilt": "^0.0.3",
     "tsx": "^4.21.0",
     "typescript": "^5",
     "vite-tsconfig-paths": "^6.1.1",
