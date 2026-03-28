@@ -22,7 +22,8 @@ This project uses shadcn/ui v4 which is built on `@base-ui/react`, not Radix UI.
 
 ## Supabase Auth
 
-- Middleware uses `getUser()`, never `getSession()` (server validation vs local JWT decode)
+- Auth gating lives in `src/proxy.ts` (NOT `middleware.ts`, which is deprecated in Next.js 16)
+- Proxy uses `getUser()`, never `getSession()` (server validation vs local JWT decode)
 - `@supabase/ssr` with `createBrowserClient` / `createServerClient` pattern
 - `cookies()` from `next/headers` is async in Next.js 15+
 - PKCE flow is automatic, no manual CSRF/state validation needed
@@ -31,7 +32,8 @@ This project uses shadcn/ui v4 which is built on `@base-ui/react`, not Radix UI.
 
 - `outputFileTracingIncludes` is a top-level config property (not under `experimental`)
 - `outputFileTracing: true` is not a valid config key (removed)
-- Turbopack is incompatible with custom webpack config (WASM). Dev script uses `next dev` without `--turbopack`
+- **Turbopack is the default** in Next.js 16 but is incompatible with custom webpack config (WASM). Dev script must use `next dev --webpack`
+- **`middleware.ts` is deprecated**, renamed to `proxy.ts`. Export `proxy()` function instead of `middleware()`
 - Supabase migration files require timestamp prefix (`20240101000000_name.sql`), not sequential numbering
 
 ## Testing
