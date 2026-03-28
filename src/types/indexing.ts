@@ -69,6 +69,23 @@ export type ChunkResult = {
   chunkIndex: number
 }
 
+export type ProcessBatchResult = {
+  job: IndexingJob
+  hasMore: boolean
+}
+
+export type StartJobOptions = {
+  triggerType: 'manual' | 'git_diff'
+  batchSize?: number
+}
+
+export type FileToProcess = {
+  path: string
+  sha: string
+  status: 'added' | 'modified' | 'removed' | 'renamed'
+  previousPath?: string
+}
+
 export type FileMetadata = {
   filePath: string
   language: string | null
