@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
       : 'static/wasm/[modulehash].wasm';
     return config;
   },
+  turbopack: {},
   outputFileTracingIncludes: {
     '/**': ['./node_modules/web-tree-sitter/*.wasm', './wasm/**/*.wasm'],
   },
