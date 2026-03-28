@@ -1,39 +1,47 @@
-export type RepositoryStatus = 'pending' | 'indexing' | 'indexed' | 'error';
+export type GitHubAuthType = 'pat' | 'github_app'
 
 export type Repository = {
-  id: string;
-  name: string;
-  url: string;
-  teamId: string;
-  status: RepositoryStatus;
-  lastIndexedAt: string | null;
-  createdAt: string;
-};
+  id: string
+  orgId: string
+  name: string
+  fullName: string
+  url: string
+  defaultBranch: string
+  lastIndexedCommit: string | null
+  githubAuthType: GitHubAuthType
+  createdAt: string
+  updatedAt: string
+}
 
-export type Chunk = {
-  id: string;
-  repositoryId: string;
-  filePath: string;
-  content: string;
-  language: string;
-  startLine: number;
-  endLine: number;
-  nodeType: string;
-};
+export type NewRepository = Omit<Repository, 'id' | 'createdAt' | 'updatedAt'>
 
-export type Embedding = {
-  id: string;
-  chunkId: string;
-  vector: number[];
-  model: string;
-  createdAt: string;
-};
+export type RepositorySettings = {
+  id: string
+  repoId: string
+  branchFilter: string[]
+  includePatterns: string[]
+  excludePatterns: string[]
+  embeddingProvider: string
+  embeddingModel: string
+  autoIndexOnAdd: boolean
+  createdAt: string
+  updatedAt: string
+}
 
-export type GraphNode = {
-  id: string;
-  repositoryId: string;
-  name: string;
-  nodeType: string;
-  filePath: string;
-  metadata: Record<string, unknown>;
-};
+export type RepositorySettingsUpdate = Partial<
+  Omit<RepositorySettings, 'id' | 'repoId' | 'createdAt' | 'updatedAt'>
+>
+
+export type CachedFile = {
+  id: number
+  repoId: string
+  filePath: string
+  content: string
+  sha: string
+  language: string | null
+  sizeBytes: number | null
+  isGenerated: boolean
+  fetchedAt: string
+}
+
+export type CachedFileUpsert = Omit<CachedFile, 'id' | 'fetchedAt'>
