@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   webpack(config, { isServer }) {
@@ -7,15 +7,12 @@ const nextConfig: NextConfig = {
       asyncWebAssembly: true,
     };
     config.output.webassemblyModuleFilename = isServer
-      ? "../static/wasm/[modulehash].wasm"
-      : "static/wasm/[modulehash].wasm";
+      ? '../static/wasm/[modulehash].wasm'
+      : 'static/wasm/[modulehash].wasm';
     return config;
   },
   outputFileTracingIncludes: {
-    "/**": [
-      "./node_modules/web-tree-sitter/*.wasm",
-      "./wasm/**/*.wasm",
-    ],
+    '/**': ['./node_modules/web-tree-sitter/*.wasm', './wasm/**/*.wasm'],
   },
 };
 
