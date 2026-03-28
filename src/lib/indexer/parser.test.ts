@@ -1,18 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockTree = { rootNode: { type: 'program' }, delete: vi.fn() };
-const mockParser = {
-  setLanguage: vi.fn(),
-  parse: vi.fn(() => mockTree),
-  delete: vi.fn(),
-};
-const MockParserClass = vi.fn(() => mockParser) as unknown as typeof import('web-tree-sitter').default;
-(MockParserClass as Record<string, unknown>).init = vi.fn(() => Promise.resolve());
-(MockParserClass as Record<string, unknown>).Language = {
-  load: vi.fn(() => Promise.resolve({ name: 'typescript' })),
-};
+const mockInit = vi.fn(() => Promise.resolve());
+const mockLanguageLoad = vi.fn(() => Promise.resolve({ name: 'typescript' }));
 
-vi.mock('web-tree-sitter', () => ({ default: MockParserClass }));
+class MockParser {
+  static init = mockInit;
+  setLanguage = vi.fn();
+  parse = vi.fn(() => mockTree);
+  delete = vi.fn();
+}
+
+vi.mock('web-tree-sitter', () => ({
+  Parser: MockParser,
+  Language: { load: mockLanguageLoad },
+}));
 
 describe('parser', () => {
   beforeEach(() => {
@@ -21,29 +23,29 @@ describe('parser', () => {
 
   describe('initTreeSitter', () => {
     it('calls Parser.init()', async () => {
-      const mod = await import('./parser');
-      await mod.initTreeSitter();
-      expect((MockParserClass as Record<string, unknown>).init).toHaveBeenCalled();
+      vi.resetModules();
+      const { initTreeSitter } = await import('./parser');
+      await initTreeSitter();
+      expect(mockInit).toHaveBeenCalled();
     });
   });
 
   describe('getLanguage', () => {
     it('returns a cached language on second call (single load)', async () => {
-      const mod = await import('./parser');
-      await mod.initTreeSitter();
-      await mod.getLanguage('typescript');
-      await mod.getLanguage('typescript');
-      expect(
-        (MockParserClass as unknown as { Language: { load: ReturnType<typeof vi.fn> } }).Language
-          .load,
-      ).toHaveBeenCalledTimes(1);
+      vi.resetModules();
+      const { getLanguage, initTreeSitter } = await import('./parser');
+      await initTreeSitter();
+      await getLanguage('typescript');
+      await getLanguage('typescript');
+      expect(mockLanguageLoad).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('parseCode', () => {
     it('returns a tree object for valid input', async () => {
-      const mod = await import('./parser');
-      const tree = await mod.parseCode('const x = 1', 'typescript');
+      vi.resetModules();
+      const { parseCode } = await import('./parser');
+      const tree = await parseCode('const x = 1', 'typescript');
       expect(tree).toBeDefined();
       expect(tree.rootNode).toBeDefined();
       expect(tree.rootNode.type).toBe('program');
