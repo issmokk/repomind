@@ -3,16 +3,18 @@ import { resolve, join } from 'path';
 import { SUPPORTED_LANGUAGES } from '../src/lib/indexer/languages';
 
 const WASM_DIR = resolve(__dirname, '..', 'wasm');
-const PREBUILT_DIR = resolve(__dirname, '..', 'node_modules', 'tree-sitter-wasm-prebuilt', 'lib');
-
 mkdirSync(WASM_DIR, { recursive: true });
+
+const SOURCES = [
+  resolve(__dirname, '..', 'node_modules', 'tree-sitter-wasm-prebuilt', 'lib'),
+  resolve(__dirname, '..', 'node_modules', '@sourcegraph', 'tree-sitter-wasms', 'out'),
+];
 
 let copied = 0;
 let missing = 0;
 
 for (const lang of SUPPORTED_LANGUAGES) {
   const dest = join(WASM_DIR, lang.grammarFile);
-  const src = join(PREBUILT_DIR, lang.grammarFile);
 
   if (existsSync(dest)) {
     console.log(`Already exists: ${lang.grammarFile}`);
@@ -20,17 +22,26 @@ for (const lang of SUPPORTED_LANGUAGES) {
     continue;
   }
 
-  if (existsSync(src)) {
-    cpSync(src, dest);
-    console.log(`Copied: ${lang.grammarFile}`);
-    copied++;
-  } else {
-    console.warn(`Not available in prebuilt package: ${lang.grammarFile} (${lang.name})`);
+  let found = false;
+  for (const srcDir of SOURCES) {
+    const src = join(srcDir, lang.grammarFile);
+    if (existsSync(src)) {
+      cpSync(src, dest);
+      console.log(`Copied: ${lang.grammarFile}`);
+      copied++;
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) {
+    console.warn(`Not found in any source: ${lang.grammarFile} (${lang.name})`);
     missing++;
   }
 }
 
-console.log(`\n${copied} grammar files ready, ${missing} unavailable.`);
+console.log(`\n${copied}/${SUPPORTED_LANGUAGES.length} grammar files ready.`);
 if (missing > 0) {
-  console.log('Missing grammars can be built from source or downloaded separately when needed.');
+  console.error(`${missing} grammar(s) missing. Install additional prebuilt packages or build from source.`);
+  process.exit(1);
 }

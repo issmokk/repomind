@@ -33,6 +33,7 @@
     "web-tree-sitter": "^0.26.7"
   },
   "devDependencies": {
+    "@sourcegraph/tree-sitter-wasms": "^0.1.9",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
