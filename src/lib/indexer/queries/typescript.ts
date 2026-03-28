@@ -1,41 +1,82 @@
-import type { SymbolType } from '../ast-analyzer'
+export const tsSymbolQuery = `
+(function_declaration
+  name: (identifier) @function.name
+) @function.definition
 
-export const TS_SYMBOL_NODE_TYPES: Record<string, SymbolType> = {
-  function_declaration: 'function',
-  class_declaration: 'class',
-  method_definition: 'method',
-  interface_declaration: 'interface',
-  type_alias_declaration: 'type_alias',
-  module: 'module',
-}
-
-export const TS_ARROW_FUNCTION_PARENTS = new Set(['lexical_declaration', 'variable_declaration'])
-
-export const TS_SCOPE_NODE_TYPES = new Set(['class_declaration', 'module'])
-
-export function getTsSymbolName(node: {
-  type: string
-  children: Array<{ type: string; text: string; children?: Array<{ type: string; text: string; children?: Array<{ type: string; text: string }> }> }>
-}): string | null {
-  if (node.type === 'lexical_declaration' || node.type === 'variable_declaration') {
-    const declarator = node.children.find((c) => c.type === 'variable_declarator')
-    if (!declarator) return null
-    const nameNode = declarator.children?.find((c) => c.type === 'identifier')
-    return nameNode?.text ?? null
-  }
-
-  const nameNode = node.children.find(
-    (c) => c.type === 'identifier' || c.type === 'type_identifier' || c.type === 'property_identifier',
+(lexical_declaration
+  (variable_declarator
+    name: (identifier) @arrow.name
+    value: (arrow_function)
   )
-  return nameNode?.text ?? null
-}
+) @arrow.definition
 
-export function isArrowFunctionAssignment(node: {
-  type: string
-  children: Array<{ type: string; children?: Array<{ type: string }> }>
-}): boolean {
-  if (!TS_ARROW_FUNCTION_PARENTS.has(node.type)) return false
-  const declarator = node.children.find((c) => c.type === 'variable_declarator')
-  if (!declarator?.children) return false
-  return declarator.children.some((c) => c.type === 'arrow_function')
-}
+(class_declaration
+  name: [(identifier) (type_identifier)] @class.name
+) @class.definition
+
+(method_definition
+  name: [(property_identifier) (identifier)] @method.name
+) @method.definition
+
+(interface_declaration
+  name: (type_identifier) @interface.name
+) @interface.definition
+
+(type_alias_declaration
+  name: (type_identifier) @type_alias.name
+) @type_alias.definition
+
+(module
+  name: (identifier) @namespace.name
+) @namespace.definition
+`
+
+export const tsImportQuery = `
+(import_statement
+  source: (string (string_fragment) @import.source)
+) @import.statement
+
+(export_statement
+  source: (string (string_fragment) @reexport.source)
+) @reexport.statement
+
+(call_expression
+  function: (import)
+  arguments: (arguments
+    (string (string_fragment) @dynamic_import.source)
+  )
+) @dynamic_import.call
+`
+
+export const tsInheritanceQuery = `
+(class_declaration
+  name: [(identifier) (type_identifier)] @child.name
+  (class_heritage
+    (extends_clause
+      value: [(identifier) (type_identifier)] @extends.parent
+    )
+  )
+) @extends.class
+
+(class_declaration
+  name: [(identifier) (type_identifier)] @child.name
+  (class_heritage
+    (implements_clause
+      [(identifier) (type_identifier)] @implements.parent
+    )
+  )
+) @implements.class
+`
+
+export const tsCallQuery = `
+(call_expression
+  function: (identifier) @call.function
+) @call.simple
+
+(call_expression
+  function: (member_expression
+    object: (_) @call.receiver
+    property: (property_identifier) @call.method
+  )
+) @call.member
+`

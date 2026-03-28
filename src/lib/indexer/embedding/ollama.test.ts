@@ -44,7 +44,7 @@ describe('OllamaProvider', () => {
 
   it('connection error triggers retry', async () => {
     mockEmbed
-      .mockRejectedValueOnce(new Error('fetch failed'))
+      .mockRejectedValueOnce(new Error('ECONNREFUSED'))
       .mockResolvedValueOnce({ embeddings: [fakeVector] })
 
     const provider = new OllamaProvider()

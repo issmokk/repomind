@@ -1,35 +1,41 @@
-import type { SymbolType } from '../ast-analyzer'
+import { rubySymbolQuery, rubyImportQuery, rubyInheritanceQuery, rubyCallQuery } from './ruby'
+import { tsSymbolQuery, tsImportQuery, tsInheritanceQuery, tsCallQuery } from './typescript'
 
-export interface LanguageConfig {
-  symbolNodeTypes: Record<string, SymbolType>
-  scopeNodeTypes: Set<string>
-  getSymbolName: (node: unknown) => string | null
-  isArrowFunction?: (node: unknown) => boolean
-}
+type QueryType = 'symbol' | 'import' | 'inheritance' | 'call'
 
-import { RUBY_SYMBOL_NODE_TYPES, RUBY_SCOPE_NODE_TYPES, getRubySymbolName } from './ruby'
-import { TS_SYMBOL_NODE_TYPES, TS_SCOPE_NODE_TYPES, getTsSymbolName, isArrowFunctionAssignment } from './typescript'
-
-const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
+const QUERY_MAP: Record<string, Record<QueryType, string>> = {
   ruby: {
-    symbolNodeTypes: RUBY_SYMBOL_NODE_TYPES,
-    scopeNodeTypes: RUBY_SCOPE_NODE_TYPES,
-    getSymbolName: getRubySymbolName as (node: unknown) => string | null,
+    symbol: rubySymbolQuery,
+    import: rubyImportQuery,
+    inheritance: rubyInheritanceQuery,
+    call: rubyCallQuery,
   },
   typescript: {
-    symbolNodeTypes: TS_SYMBOL_NODE_TYPES,
-    scopeNodeTypes: TS_SCOPE_NODE_TYPES,
-    getSymbolName: getTsSymbolName as (node: unknown) => string | null,
-    isArrowFunction: isArrowFunctionAssignment as (node: unknown) => boolean,
+    symbol: tsSymbolQuery,
+    import: tsImportQuery,
+    inheritance: tsInheritanceQuery,
+    call: tsCallQuery,
   },
   javascript: {
-    symbolNodeTypes: TS_SYMBOL_NODE_TYPES,
-    scopeNodeTypes: TS_SCOPE_NODE_TYPES,
-    getSymbolName: getTsSymbolName as (node: unknown) => string | null,
-    isArrowFunction: isArrowFunctionAssignment as (node: unknown) => boolean,
+    symbol: tsSymbolQuery,
+    import: tsImportQuery,
+    inheritance: tsInheritanceQuery,
+    call: tsCallQuery,
   },
 }
 
-export function getLanguageConfig(language: string): LanguageConfig | null {
-  return LANGUAGE_CONFIGS[language] ?? null
+export function getSymbolQuery(language: string): string | null {
+  return QUERY_MAP[language]?.symbol ?? null
+}
+
+export function getImportQuery(language: string): string | null {
+  return QUERY_MAP[language]?.import ?? null
+}
+
+export function getInheritanceQuery(language: string): string | null {
+  return QUERY_MAP[language]?.inheritance ?? null
+}
+
+export function getCallQuery(language: string): string | null {
+  return QUERY_MAP[language]?.call ?? null
 }

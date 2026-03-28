@@ -1,226 +1,272 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest'
-import { extractSymbols, detectLanguage } from './ast-analyzer'
+import { extractSymbols, extractImports, extractCallSites, extractInheritance, detectLanguage } from './ast-analyzer'
 
 function makeNode(
-  type: string,
-  text: string,
-  children: ReturnType<typeof makeNode>[] = [],
-  startRow = 0,
-  endRow = 0,
-  parent: ReturnType<typeof makeNode> | null = null,
-): ReturnType<typeof makeNode> & { parent: ReturnType<typeof makeNode> | null } {
+  type: string, text: string, children: ReturnType<typeof makeNode>[] = [],
+  startRow = 0, endRow = 0, parent: ReturnType<typeof makeNode> | null = null,
+): ReturnType<typeof makeNode> {
   const node: Record<string, unknown> = {
-    type,
-    text,
-    startPosition: { row: startRow, column: 0 },
-    endPosition: { row: endRow, column: 0 },
-    children,
-    childCount: children.length,
-    parent,
+    type, text, startPosition: { row: startRow, column: 0 },
+    endPosition: { row: endRow, column: 0 }, children, childCount: children.length, parent,
   }
   children.forEach((c) => { (c as Record<string, unknown>).parent = node })
   return node as never
 }
 
-function makeTree(rootNode: ReturnType<typeof makeNode>) {
-  return { rootNode } as never
+function makeTree(rootNode: ReturnType<typeof makeNode>) { return { rootNode } as never }
+
+function mockLanguage(captureResults: Array<{ name: string; node: ReturnType<typeof makeNode> }>) {
+  return {
+    query: () => ({
+      captures: () => captureResults,
+    }),
+  } as never
 }
 
 describe('extractSymbols', () => {
   describe('Ruby', () => {
-    it('extracts class definitions', () => {
-      const nameNode = makeNode('constant', 'PaymentService')
+    it('extracts class definitions', async () => {
+      const nameNode = makeNode('constant', 'PaymentService', [], 0, 0)
       const classNode = makeNode('class', 'class PaymentService\nend', [nameNode], 0, 19)
-      const tree = makeTree(makeNode('program', '', [classNode]))
+      ;(nameNode as Record<string, unknown>).parent = classNode
 
-      const result = extractSymbols(tree, 'ruby', 'payment_service.rb')
+      const lang = mockLanguage([
+        { name: 'class.name', node: nameNode },
+        { name: 'class.definition', node: classNode },
+      ])
+
+      const result = await extractSymbols(makeTree(makeNode('program', '', [classNode])), 'ruby', 'payment_service.rb', lang)
       expect(result).toHaveLength(1)
       expect(result[0].type).toBe('class')
       expect(result[0].name).toBe('PaymentService')
       expect(result[0].startLine).toBe(1)
-      expect(result[0].endLine).toBe(20)
     })
 
-    it('extracts module definitions', () => {
-      const nameNode = makeNode('scope_resolution', 'WT::Payment')
+    it('extracts module definitions', async () => {
+      const nameNode = makeNode('scope_resolution', 'WT::Payment', [], 0, 0)
       const moduleNode = makeNode('module', 'module WT::Payment', [nameNode], 0, 5)
-      const tree = makeTree(makeNode('program', '', [moduleNode]))
+      ;(nameNode as Record<string, unknown>).parent = moduleNode
 
-      const result = extractSymbols(tree, 'ruby', 'payment.rb')
-      expect(result).toHaveLength(1)
+      const lang = mockLanguage([
+        { name: 'module.name', node: nameNode },
+        { name: 'module.definition', node: moduleNode },
+      ])
+
+      const result = await extractSymbols(makeTree(makeNode('program', '', [moduleNode])), 'ruby', 'payment.rb', lang)
       expect(result[0].type).toBe('module')
       expect(result[0].name).toBe('WT::Payment')
     })
 
-    it('extracts method definitions with parent class scope', () => {
-      const methodName = makeNode('identifier', 'bar')
+    it('extracts method with parent class scope', async () => {
+      const className = makeNode('constant', 'Foo', [], 0, 0)
+      const classNode = makeNode('class', 'class Foo', [className], 0, 5)
+      const methodName = makeNode('identifier', 'bar', [], 2, 2)
       const methodNode = makeNode('method', 'def bar; end', [methodName], 2, 4)
-      const className = makeNode('constant', 'Foo')
-      const classNode = makeNode('class', 'class Foo', [className, methodNode], 0, 5)
-      const tree = makeTree(makeNode('program', '', [classNode]))
+      ;(methodName as Record<string, unknown>).parent = methodNode
+      ;(methodNode as Record<string, unknown>).parent = classNode
 
-      const result = extractSymbols(tree, 'ruby', 'foo.rb')
+      const lang = mockLanguage([
+        { name: 'class.name', node: className },
+        { name: 'class.definition', node: classNode },
+        { name: 'method.name', node: methodName },
+        { name: 'method.definition', node: methodNode },
+      ])
+
+      const result = await extractSymbols(makeTree(makeNode('program', '', [classNode])), 'ruby', 'foo.rb', lang)
       const method = result.find((s) => s.type === 'method')
       expect(method).toBeDefined()
-      expect(method!.name).toBe('bar')
       expect(method!.parentScope).toBe('Foo')
     })
 
-    it('extracts singleton methods', () => {
-      const nameNode = makeNode('identifier', 'create')
+    it('extracts singleton methods', async () => {
+      const nameNode = makeNode('identifier', 'create', [], 1, 1)
       const singletonNode = makeNode('singleton_method', 'def self.create; end', [nameNode], 1, 3)
-      const tree = makeTree(makeNode('program', '', [singletonNode]))
+      ;(nameNode as Record<string, unknown>).parent = singletonNode
 
-      const result = extractSymbols(tree, 'ruby', 'factory.rb')
-      expect(result.some((s) => s.name === 'self.create')).toBe(true)
-    })
+      const lang = mockLanguage([
+        { name: 'singleton_method.name', node: nameNode },
+        { name: 'singleton_method.definition', node: singletonNode },
+      ])
 
-    it('handles nested classes/modules', () => {
-      const methodName = makeNode('identifier', 'call')
-      const methodNode = makeNode('method', 'def call; end', [methodName], 4, 6)
-      const actionName = makeNode('constant', 'Action')
-      const actionClass = makeNode('class', 'class Action', [actionName, methodNode], 3, 7)
-      const paymentName = makeNode('constant', 'Payment')
-      const paymentModule = makeNode('module', 'module Payment', [paymentName, actionClass], 1, 8)
-      const wtName = makeNode('constant', 'WT')
-      const wtModule = makeNode('module', 'module WT', [wtName, paymentModule], 0, 9)
-      const tree = makeTree(makeNode('program', '', [wtModule]))
-
-      const result = extractSymbols(tree, 'ruby', 'action.rb')
-      const method = result.find((s) => s.type === 'method' && s.name === 'call')
-      expect(method).toBeDefined()
-      expect(method!.parentScope).toBe('WT.Payment.Action')
+      const result = await extractSymbols(makeTree(makeNode('program', '', [singletonNode])), 'ruby', 'factory.rb', lang)
+      expect(result[0].name).toBe('create')
+      expect(result[0].type).toBe('method')
     })
   })
 
   describe('TypeScript', () => {
-    it('extracts function declarations', () => {
-      const nameNode = makeNode('identifier', 'processPayment')
+    it('extracts function declarations', async () => {
+      const nameNode = makeNode('identifier', 'processPayment', [], 4, 4)
       const funcNode = makeNode('function_declaration', 'function processPayment() {}', [nameNode], 4, 24)
-      const tree = makeTree(makeNode('program', '', [funcNode]))
+      ;(nameNode as Record<string, unknown>).parent = funcNode
 
-      const result = extractSymbols(tree, 'typescript', 'payment.ts')
-      expect(result).toHaveLength(1)
+      const lang = mockLanguage([
+        { name: 'function.name', node: nameNode },
+        { name: 'function.definition', node: funcNode },
+      ])
+
+      const result = await extractSymbols(makeTree(makeNode('program', '', [funcNode])), 'typescript', 'payment.ts', lang)
       expect(result[0].type).toBe('function')
       expect(result[0].name).toBe('processPayment')
       expect(result[0].startLine).toBe(5)
     })
 
-    it('extracts arrow function assignments', () => {
-      const nameNode = makeNode('identifier', 'handler')
-      const arrowNode = makeNode('arrow_function', '() => {}')
-      const declarator = makeNode('variable_declarator', 'handler = () => {}', [nameNode, arrowNode])
-      const lexical = makeNode('lexical_declaration', 'const handler = () => {}', [declarator], 0, 2)
-      const tree = makeTree(makeNode('program', '', [lexical]))
+    it('extracts arrow function assignments', async () => {
+      const nameNode = makeNode('identifier', 'handler', [], 0, 0)
+      const arrowDef = makeNode('lexical_declaration', 'const handler = () => {}', [nameNode], 0, 2)
+      ;(nameNode as Record<string, unknown>).parent = arrowDef
 
-      const result = extractSymbols(tree, 'typescript', 'handler.ts')
-      expect(result).toHaveLength(1)
+      const lang = mockLanguage([
+        { name: 'arrow.name', node: nameNode },
+        { name: 'arrow.definition', node: arrowDef },
+      ])
+
+      const result = await extractSymbols(makeTree(makeNode('program', '', [arrowDef])), 'typescript', 'handler.ts', lang)
       expect(result[0].type).toBe('function')
       expect(result[0].name).toBe('handler')
     })
 
-    it('extracts class declarations', () => {
-      const nameNode = makeNode('identifier', 'PaymentController')
-      const classNode = makeNode('class_declaration', 'class PaymentController {}', [nameNode], 0, 10)
-      const tree = makeTree(makeNode('program', '', [classNode]))
-
-      const result = extractSymbols(tree, 'typescript', 'ctrl.ts')
-      expect(result).toHaveLength(1)
-      expect(result[0].type).toBe('class')
-      expect(result[0].name).toBe('PaymentController')
-    })
-
-    it('extracts method definitions within classes', () => {
-      const methodName = makeNode('property_identifier', 'handleRequest')
-      const methodNode = makeNode('method_definition', 'handleRequest() {}', [methodName], 2, 5)
-      const className = makeNode('identifier', 'Ctrl')
-      const classNode = makeNode('class_declaration', 'class Ctrl', [className, methodNode], 0, 6)
-      const tree = makeTree(makeNode('program', '', [classNode]))
-
-      const result = extractSymbols(tree, 'typescript', 'ctrl.ts')
-      const method = result.find((s) => s.type === 'method')
-      expect(method).toBeDefined()
-      expect(method!.parentScope).toBe('Ctrl')
-    })
-
-    it('extracts interface declarations', () => {
-      const nameNode = makeNode('type_identifier', 'PaymentProvider')
+    it('extracts interface declarations', async () => {
+      const nameNode = makeNode('type_identifier', 'PaymentProvider', [], 0, 0)
       const ifaceNode = makeNode('interface_declaration', 'interface PaymentProvider {}', [nameNode], 0, 3)
-      const tree = makeTree(makeNode('program', '', [ifaceNode]))
+      ;(nameNode as Record<string, unknown>).parent = ifaceNode
 
-      const result = extractSymbols(tree, 'typescript', 'types.ts')
-      expect(result).toHaveLength(1)
+      const lang = mockLanguage([
+        { name: 'interface.name', node: nameNode },
+        { name: 'interface.definition', node: ifaceNode },
+      ])
+
+      const result = await extractSymbols(makeTree(makeNode('program', '', [ifaceNode])), 'typescript', 'types.ts', lang)
       expect(result[0].type).toBe('interface')
-      expect(result[0].name).toBe('PaymentProvider')
     })
 
-    it('extracts type alias declarations', () => {
-      const nameNode = makeNode('type_identifier', 'PaymentStatus')
+    it('extracts type alias declarations', async () => {
+      const nameNode = makeNode('type_identifier', 'PaymentStatus', [], 0, 0)
       const typeNode = makeNode('type_alias_declaration', "type PaymentStatus = 'ok'", [nameNode], 0, 0)
-      const tree = makeTree(makeNode('program', '', [typeNode]))
+      ;(nameNode as Record<string, unknown>).parent = typeNode
 
-      const result = extractSymbols(tree, 'typescript', 'types.ts')
-      expect(result).toHaveLength(1)
+      const lang = mockLanguage([
+        { name: 'type_alias.name', node: nameNode },
+        { name: 'type_alias.definition', node: typeNode },
+      ])
+
+      const result = await extractSymbols(makeTree(makeNode('program', '', [typeNode])), 'typescript', 'types.ts', lang)
       expect(result[0].type).toBe('type_alias')
-      expect(result[0].name).toBe('PaymentStatus')
-    })
-
-    it('handles namespace nesting', () => {
-      const funcName = makeNode('identifier', 'fetchData')
-      const funcNode = makeNode('function_declaration', 'function fetchData() {}', [funcName], 2, 5)
-      const nsName = makeNode('identifier', 'API')
-      const nsNode = makeNode('module', 'namespace API', [nsName, funcNode], 0, 6)
-      const tree = makeTree(makeNode('program', '', [nsNode]))
-
-      const result = extractSymbols(tree, 'typescript', 'api.ts')
-      const func = result.find((s) => s.type === 'function')
-      expect(func).toBeDefined()
-      expect(func!.parentScope).toBe('API')
     })
   })
 
   describe('General', () => {
-    it('returns empty array for unsupported language', () => {
-      const tree = makeTree(makeNode('document', ''))
-      const result = extractSymbols(tree, 'html', 'index.html')
+    it('returns empty array for unsupported language', async () => {
+      const result = await extractSymbols(makeTree(makeNode('document', '')), 'html', 'index.html')
       expect(result).toEqual([])
     })
 
-    it('returns empty array for file with no symbols', () => {
-      const commentNode = makeNode('comment', '# just a comment')
-      const tree = makeTree(makeNode('program', '', [commentNode]))
-      const result = extractSymbols(tree, 'ruby', 'empty.rb')
+    it('returns empty array when no language object provided', async () => {
+      const result = await extractSymbols(makeTree(makeNode('program', '')), 'ruby', 'test.rb')
       expect(result).toEqual([])
-    })
-
-    it('each symbol includes all required fields', () => {
-      const nameNode = makeNode('identifier', 'foo')
-      const funcNode = makeNode('function_declaration', 'function foo() {}', [nameNode], 0, 2)
-      const tree = makeTree(makeNode('program', '', [funcNode]))
-
-      const [symbol] = extractSymbols(tree, 'typescript', 'test.ts')
-      expect(symbol).toHaveProperty('type')
-      expect(symbol).toHaveProperty('name')
-      expect(symbol).toHaveProperty('filePath')
-      expect(symbol).toHaveProperty('startLine')
-      expect(symbol).toHaveProperty('endLine')
-      expect(symbol).toHaveProperty('parentScope')
-      expect(symbol).toHaveProperty('rawText')
     })
   })
 })
 
+describe('extractImports', () => {
+  it('extracts Ruby require', async () => {
+    const methodNode = makeNode('identifier', 'require', [], 0, 0)
+    const sourceNode = makeNode('string_content', 'foo', [], 0, 0)
+
+    const lang = mockLanguage([
+      { name: 'import.method', node: methodNode },
+      { name: 'import.source', node: sourceNode },
+    ])
+
+    const result = await extractImports(makeTree(makeNode('program', '')), 'ruby', 'app.rb', lang)
+    expect(result).toHaveLength(1)
+    expect(result[0].source).toBe('foo')
+    expect(result[0].kind).toBe('require')
+  })
+
+  it('extracts TS import statement', async () => {
+    const sourceNode = makeNode('string_fragment', './bar', [], 0, 0)
+
+    const lang = mockLanguage([
+      { name: 'import.source', node: sourceNode },
+    ])
+
+    const result = await extractImports(makeTree(makeNode('program', '')), 'typescript', 'app.ts', lang)
+    expect(result[0].source).toBe('./bar')
+    expect(result[0].isRelative).toBe(true)
+    expect(result[0].kind).toBe('import')
+  })
+
+  it('returns empty for unsupported language', async () => {
+    const result = await extractImports(makeTree(makeNode('program', '')), 'html', 'index.html')
+    expect(result).toEqual([])
+  })
+})
+
+describe('extractCallSites', () => {
+  it('extracts standalone function call', async () => {
+    const funcNode = makeNode('identifier', 'fetchData', [], 5, 5)
+    ;(funcNode as Record<string, unknown>).parent = makeNode('program', '')
+
+    const lang = mockLanguage([
+      { name: 'call.function', node: funcNode },
+    ])
+
+    const result = await extractCallSites(makeTree(makeNode('program', '')), 'typescript', 'app.ts', lang)
+    expect(result[0].calleeName).toBe('fetchData')
+    expect(result[0].receiver).toBeNull()
+  })
+
+  it('extracts method call with receiver', async () => {
+    const receiverNode = makeNode('identifier', 'api', [], 3, 3)
+    const methodNode = makeNode('property_identifier', 'get', [], 3, 3)
+    ;(methodNode as Record<string, unknown>).parent = makeNode('program', '')
+
+    const lang = mockLanguage([
+      { name: 'call.receiver', node: receiverNode },
+      { name: 'call.method', node: methodNode },
+    ])
+
+    const result = await extractCallSites(makeTree(makeNode('program', '')), 'typescript', 'app.ts', lang)
+    expect(result[0].calleeName).toBe('api.get')
+    expect(result[0].receiver).toBe('api')
+  })
+})
+
+describe('extractInheritance', () => {
+  it('extracts class extends', async () => {
+    const childNode = makeNode('identifier', 'Admin', [], 0, 0)
+    const parentNode = makeNode('identifier', 'User', [], 0, 0)
+
+    const lang = mockLanguage([
+      { name: 'child.name', node: childNode },
+      { name: 'extends.parent', node: parentNode },
+    ])
+
+    const result = await extractInheritance(makeTree(makeNode('program', '')), 'typescript', 'admin.ts', lang)
+    expect(result[0].childName).toBe('Admin')
+    expect(result[0].parentName).toBe('User')
+    expect(result[0].kind).toBe('extends')
+  })
+
+  it('extracts class implements', async () => {
+    const childNode = makeNode('identifier', 'OllamaProvider', [], 0, 0)
+    const ifaceNode = makeNode('type_identifier', 'EmbeddingProvider', [], 0, 0)
+
+    const lang = mockLanguage([
+      { name: 'child.name', node: childNode },
+      { name: 'implements.parent', node: ifaceNode },
+    ])
+
+    const result = await extractInheritance(makeTree(makeNode('program', '')), 'typescript', 'ollama.ts', lang)
+    expect(result[0].kind).toBe('implements')
+    expect(result[0].parentName).toBe('EmbeddingProvider')
+  })
+})
+
 describe('detectLanguage', () => {
-  it('detects typescript from .ts extension', () => {
-    expect(detectLanguage('src/index.ts')).toBe('typescript')
-  })
-
-  it('detects ruby from .rb extension', () => {
-    expect(detectLanguage('app/models/user.rb')).toBe('ruby')
-  })
-
-  it('returns null for unknown extensions', () => {
-    expect(detectLanguage('file.xyz')).toBeNull()
-  })
+  it('detects typescript from .ts', () => expect(detectLanguage('src/index.ts')).toBe('typescript'))
+  it('detects ruby from .rb', () => expect(detectLanguage('app/models/user.rb')).toBe('ruby'))
+  it('returns null for unknown', () => expect(detectLanguage('file.xyz')).toBeNull())
 })

@@ -157,30 +157,36 @@ function slidingWindowRaw(lines: string[], startLine: number, endLine: number): 
 
 export function mergeSmallChunks(chunks: RawChunk[], lines: string[]): RawChunk[] {
   if (chunks.length === 0) return []
-  const result: RawChunk[] = [chunks[0]]
 
-  for (let i = 1; i < chunks.length; i++) {
-    const prev = result[result.length - 1]
-    const prevText = getLinesText(lines, prev.startLine, prev.endLine)
-    if (countNonWhitespace(prevText) < MERGE_THRESHOLD_NWS) {
-      prev.endLine = chunks[i].endLine
-      if (!prev.symbolName && chunks[i].symbolName) {
-        prev.symbolName = chunks[i].symbolName
-        prev.symbolType = chunks[i].symbolType
-        prev.parentScope = chunks[i].parentScope
+  const result: RawChunk[] = []
+
+  for (const chunk of chunks) {
+    const chunkText = getLinesText(lines, chunk.startLine, chunk.endLine)
+    const chunkNws = countNonWhitespace(chunkText)
+
+    if (chunkNws < MERGE_THRESHOLD_NWS && result.length > 0) {
+      const prev = result[result.length - 1]
+      prev.endLine = chunk.endLine
+      if (!prev.symbolName && chunk.symbolName) {
+        prev.symbolName = chunk.symbolName
+        prev.symbolType = chunk.symbolType
+        prev.parentScope = chunk.parentScope
+      }
+    } else if (result.length > 0) {
+      const prev = result[result.length - 1]
+      const prevText = getLinesText(lines, prev.startLine, prev.endLine)
+      if (countNonWhitespace(prevText) < MERGE_THRESHOLD_NWS) {
+        prev.endLine = chunk.endLine
+        if (!prev.symbolName && chunk.symbolName) {
+          prev.symbolName = chunk.symbolName
+          prev.symbolType = chunk.symbolType
+          prev.parentScope = chunk.parentScope
+        }
+      } else {
+        result.push({ ...chunk })
       }
     } else {
-      result.push(chunks[i])
-    }
-  }
-
-  // check if the last chunk is too small and merge backward
-  if (result.length > 1) {
-    const last = result[result.length - 1]
-    const lastText = getLinesText(lines, last.startLine, last.endLine)
-    if (countNonWhitespace(lastText) < MERGE_THRESHOLD_NWS) {
-      result[result.length - 2].endLine = last.endLine
-      result.pop()
+      result.push({ ...chunk })
     }
   }
 
@@ -213,13 +219,13 @@ function buildContextHeader(
   return parts.join('\n')
 }
 
-export function chunkCode(
+export async function chunkFile(
   code: string,
   symbols: SymbolInfo[],
   filePath: string,
   language: string,
   imports?: string[],
-): ChunkResult[] {
+): Promise<ChunkResult[]> {
   const lines = getLines(code)
   if (lines.length === 0 || (lines.length === 1 && lines[0].trim() === '')) return []
 
