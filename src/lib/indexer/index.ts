@@ -9,3 +9,4 @@
  * Split 01 will add: chunker.ts, embedder.ts, and pipeline orchestration.
  */
 export * from './languages';
+export * from './parser';
