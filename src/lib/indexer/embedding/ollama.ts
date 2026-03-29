@@ -13,7 +13,7 @@ export class OllamaProvider implements EmbeddingProvider {
   private model: string
   private timeoutMs: number
 
-  constructor(model = 'gte-qwen2-1.5b-instruct', baseUrl?: string, timeoutMs = DEFAULT_TIMEOUT_MS) {
+  constructor(model = 'rjmalagon/gte-qwen2-1.5b-instruct-embed-f16', baseUrl?: string, timeoutMs = DEFAULT_TIMEOUT_MS) {
     this.model = model
     this.name = `ollama/${model}`
     this.timeoutMs = timeoutMs

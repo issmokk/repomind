@@ -56,6 +56,6 @@ describe('OllamaProvider', () => {
   it('uses OLLAMA_BASE_URL from env', () => {
     process.env.OLLAMA_BASE_URL = 'http://custom:1234'
     const provider = new OllamaProvider()
-    expect(provider.name).toBe('ollama/gte-qwen2-1.5b-instruct')
+    expect(provider.name).toBe('ollama/rjmalagon/gte-qwen2-1.5b-instruct-embed-f16')
   })
 })
