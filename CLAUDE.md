@@ -57,6 +57,12 @@ When using `/deep-implement` or implementing code in sections:
 
 Quality and accuracy over speed. Do not rush. Patches and debt accumulate fast when verification steps are skipped.
 
+## Git / PR
+
+- `GITHUB_TOKEN` env var is a fine-grained PAT without PR permissions. Before running `gh pr create`, unset it: `unset GITHUB_TOKEN && gh pr create --draft ...`
+- The keyring token (from `gh auth login`) has full `repo` scope and works for PR creation.
+- Always create draft PRs (`gh pr create --draft`).
+
 ## Commands
 
 ```
