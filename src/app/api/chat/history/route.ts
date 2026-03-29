@@ -9,17 +9,27 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url)
   const limit = Math.min(
-    parseInt(url.searchParams.get('limit') ?? '50', 10) || 50,
+    Math.max(parseInt(url.searchParams.get('limit') ?? '50', 10) || 50, 1),
     200
   )
-  const offset = parseInt(url.searchParams.get('offset') ?? '0', 10) || 0
-
-  const messages = await auth.storage.getMessages(
-    auth.userId,
-    auth.orgId,
-    auth.supabase,
-    { limit, offset }
+  const offset = Math.max(
+    parseInt(url.searchParams.get('offset') ?? '0', 10) || 0,
+    0
   )
 
-  return NextResponse.json(messages)
+  try {
+    const messages = await auth.storage.getMessages(
+      auth.userId,
+      auth.orgId,
+      auth.supabase,
+      { limit, offset }
+    )
+    return NextResponse.json(messages)
+  } catch (err) {
+    console.error('History fetch error:', err)
+    return NextResponse.json(
+      { error: 'Failed to fetch message history' },
+      { status: 500 }
+    )
+  }
 }

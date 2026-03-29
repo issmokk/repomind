@@ -28,6 +28,12 @@ function mapErrorToResponse(err: unknown): NextResponse {
   if (message.includes('No LLM provider available')) {
     return NextResponse.json({ error: message }, { status: 503 })
   }
+  if (message.includes('Embedding dimension mismatch')) {
+    return NextResponse.json(
+      { error: 'Embedding dimension mismatch. Re-index your repositories.' },
+      { status: 500 }
+    )
+  }
   if (message.includes('not found or not accessible')) {
     return NextResponse.json(
       { error: 'You do not have access to one or more requested repositories.' },
@@ -80,6 +86,17 @@ export async function POST(req: Request) {
         analysis.suggestedGraphDepth,
         teamSettings.maxGraphHops
       ),
+    }
+
+    const userRepos = await auth.storage.getRepositories(auth.supabase)
+    const userRepoIds = new Set(userRepos.map((r) => r.id))
+    for (const repoId of repoIds) {
+      if (!userRepoIds.has(repoId)) {
+        return NextResponse.json(
+          { error: 'You do not have access to one or more requested repositories.' },
+          { status: 403 }
+        )
+      }
     }
 
     const embeddingProvider = getEmbeddingProvider(teamSettings)

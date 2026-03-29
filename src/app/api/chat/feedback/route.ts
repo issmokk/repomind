@@ -27,6 +27,23 @@ export async function POST(req: Request) {
   }
 
   try {
+    const messages = await auth.storage.getMessages(
+      auth.userId,
+      auth.orgId,
+      auth.supabase,
+      { limit: 1, offset: 0 }
+    )
+    const allOrgMessages = await auth.supabase
+      .from('chat_messages')
+      .select('id')
+      .eq('id', messageId)
+      .eq('org_id', auth.orgId)
+      .maybeSingle()
+
+    if (!allOrgMessages.data) {
+      return NextResponse.json({ error: 'Message not found' }, { status: 404 })
+    }
+
     await auth.storage.saveFeedback({
       messageId,
       userId: auth.userId,
@@ -35,9 +52,12 @@ export async function POST(req: Request) {
     })
     return NextResponse.json({ success: true })
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    if (message.includes('23503')) {
+    const errMsg = err instanceof Error ? err.message : String(err)
+    if (errMsg.includes('23503')) {
       return NextResponse.json({ error: 'Message not found' }, { status: 404 })
+    }
+    if (errMsg.includes('23505')) {
+      return NextResponse.json({ error: 'Feedback already submitted for this message' }, { status: 409 })
     }
     console.error('Feedback save error:', err)
     return NextResponse.json({ error: 'Failed to save feedback' }, { status: 500 })
