@@ -6,7 +6,7 @@ import { SUPPORTED_LANGUAGES } from '@/lib/indexer/languages'
 function detectLanguage(filePath: string): string | null {
   const ext = '.' + filePath.split('.').pop()
   for (const lang of SUPPORTED_LANGUAGES) {
-    if (lang.extensions.includes(ext)) return lang.name
+    if ((lang.extensions as readonly string[]).includes(ext)) return lang.name
   }
   return null
 }

@@ -90,7 +90,7 @@ export class GitHubClient {
     return { content, sha: data.sha, size: data.size, encoding: 'utf-8' }
   }
 
-  private async request(path: string): Promise<Record<string, unknown>> {
+  private async request(path: string): Promise<Record<string, any>> {
     const headers = await this.auth.getHeaders()
     const response = await fetch(`${this.baseUrl}${path}`, { headers })
 

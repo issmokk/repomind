@@ -195,15 +195,17 @@ export async function processNextBatch(
       const language = detectLanguage(file.path) ?? 'unknown'
 
       let tree
+      let langObj
       try {
         await initTreeSitter()
-        const lang = await getLanguage(language)
-        tree = parseCode(content.content, lang)
+        tree = await parseCode(content.content, language)
+        langObj = await getLanguage(language)
       } catch {
         tree = null
+        langObj = undefined
       }
 
-      const symbols = tree ? await extractSymbols(tree, language, file.path, await getLanguage(language).catch(() => undefined)) : []
+      const symbols = tree ? await extractSymbols(tree as never, language, file.path, langObj as never) : []
       const chunks = await chunkFile(content.content, symbols, file.path, language)
 
       if (chunks.length > 0) {
@@ -230,12 +232,9 @@ export async function processNextBatch(
         await storage.upsertChunks(chunkUpserts)
       }
 
-      let langObj
-      try { langObj = await getLanguage(language) } catch { langObj = undefined }
-
-      const imports = tree && langObj ? await extractImports(tree, language, file.path, langObj) : []
-      const callSites = tree && langObj ? await extractCallSites(tree, language, file.path, langObj) : []
-      const inheritanceRaw = tree && langObj ? await extractInheritance(tree, language, file.path, langObj) : []
+      const imports = tree && langObj ? await extractImports(tree as never, language, file.path, langObj as never) : []
+      const callSites = tree && langObj ? await extractCallSites(tree as never, language, file.path, langObj as never) : []
+      const inheritanceRaw = tree && langObj ? await extractInheritance(tree as never, language, file.path, langObj as never) : []
 
       const analysisResult: ASTAnalysisResult = {
         imports,

@@ -71,7 +71,7 @@ const NAME_TYPES = new Set(['constant', 'identifier', 'type_identifier', 'scope_
 export function detectLanguage(filePath: string): string | null {
   const ext = '.' + (filePath.split('.').pop() ?? '')
   for (const lang of SUPPORTED_LANGUAGES) {
-    if (lang.extensions.includes(ext)) return lang.name
+    if ((lang.extensions as readonly string[]).includes(ext)) return lang.name
   }
   return null
 }
@@ -233,7 +233,7 @@ export async function extractCallSites(
       calls.push({
         calleeName,
         receiver,
-        containingScope: buildParentScope(capture.node),
+        containingScope: buildParentScope(capture.node) ?? '',
         filePath,
         line: capture.node.startPosition.row + 1,
       })
