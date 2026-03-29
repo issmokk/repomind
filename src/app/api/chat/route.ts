@@ -52,14 +52,34 @@ export async function POST(req: Request) {
   const auth = await getAuthContext()
   if (auth instanceof NextResponse) return auth
 
-  let body: { question?: string; repoIds?: string[]; filters?: Record<string, string> }
+  let body: Record<string, unknown>
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  const { question, repoIds, filters } = body
+  const repoIds = body.repoIds as string[] | undefined
+  const filters = body.filters as Record<string, string> | undefined
+
+  let question: string | undefined
+  if (typeof body.question === 'string') {
+    question = body.question
+  } else if (Array.isArray(body.messages)) {
+    const lastUserMsg = [...body.messages].reverse().find(
+      (m: { role?: string }) => m.role === 'user'
+    )
+    if (lastUserMsg) {
+      if (typeof lastUserMsg.content === 'string') {
+        question = lastUserMsg.content
+      } else if (Array.isArray(lastUserMsg.parts)) {
+        question = lastUserMsg.parts
+          .filter((p: { type?: string }) => p.type === 'text')
+          .map((p: { text?: string }) => p.text)
+          .join('')
+      }
+    }
+  }
 
   if (!question || typeof question !== 'string') {
     return NextResponse.json(
