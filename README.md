@@ -8,41 +8,66 @@ AI-powered codebase context engine. Index repositories via AST parsing, store em
 - **Tailwind CSS v4** + shadcn/ui (base-ui)
 - **Supabase** (Auth, PostgreSQL, pgvector)
 - **web-tree-sitter** (AST parsing, 16 languages)
+- **Ollama** (local embeddings, gte-qwen2-1.5b-instruct)
 - **Vitest** + React Testing Library
 
 ## Prerequisites
 
 - Node.js 18+
-- A [Supabase](https://supabase.com) project
+- A [Supabase](https://supabase.com) project (or local via Docker)
 - A [GitHub OAuth App](https://github.com/settings/developers) (for authentication)
+- A [GitHub Personal Access Token](https://github.com/settings/tokens) (for indexing repos)
+- [Ollama](https://ollama.com) (optional, for local embeddings)
 
 ## Setup
 
 ```bash
-# Install dependencies
 npm install
-
-# Copy env template and fill in your Supabase credentials
 cp .env.example .env.local
-
-# Download tree-sitter grammar WASM files
-npm run setup
-
-# Apply database migrations (requires Supabase project)
-npx supabase db push
-
-# Start development server
+npm run setup                        # Download tree-sitter WASM grammars
+npx supabase start                   # Start local Supabase (requires Docker)
+npx supabase db push --local         # Apply migrations
+ollama pull gte-qwen2-1.5b-instruct  # Optional: local embedding model
 npm run dev
 ```
 
 ## Environment Variables
 
-See `.env.example` for the full list. Required:
+See `.env.example`. Required:
 
-- `NEXT_PUBLIC_SUPABASE_URL` - your Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - your Supabase anon/public key
+- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (server-side, bypasses RLS)
+- `GITHUB_PAT` (Personal Access Token with `repo` scope)
 
-GitHub OAuth credentials are configured directly in the Supabase Dashboard (Authentication > Providers > GitHub), not in env vars.
+Optional: `OLLAMA_BASE_URL`, `OPENAI_API_KEY`
+
+GitHub OAuth is configured in Supabase Dashboard (Authentication > Providers > GitHub).
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/repos` | Add a repository |
+| `GET` | `/api/repos` | List repositories with job status |
+| `DELETE` | `/api/repos/:id` | Remove repo and all indexed data |
+| `POST` | `/api/repos/:id/index` | Trigger indexing |
+| `POST` | `/api/repos/:id/index/process` | Continue batch processing |
+| `GET` | `/api/repos/:id/status` | Get indexing job status |
+| `GET/PUT` | `/api/repos/:id/settings` | Get/update indexing settings |
+
+## Architecture
+
+```
+GitHub API -> File Cache -> Tree-sitter -> AST Analyzer -> Semantic Chunker -> Embeddings
+                                               |                                    |
+                                         Graph Builder                          Supabase
+                                               |                             (pgvector)
+                                          graph_edges ──────────────────────────────┘
+```
+
+**Key modules:** StorageProvider, GitHubClient, GitHubFileCache, File Filter, AST Analyzer (Tree-sitter queries), Semantic Chunker (AST bin-packing + context prepending), Embedding Providers (Ollama/OpenAI), Graph Builder, Pipeline Orchestrator (self-chaining batches, concurrency guard, stale detection)
+
+**Database:** 6 tables with RLS, HNSW vector index, transactional functions (`repositories`, `repository_settings`, `cached_files`, `code_chunks`, `graph_edges`, `indexing_jobs`)
 
 ## Scripts
 
@@ -50,33 +75,35 @@ GitHub OAuth credentials are configured directly in the Supabase Dashboard (Auth
 |---------|-------------|
 | `npm run dev` | Start dev server |
 | `npm run build` | Production build |
-| `npm run lint` | Run ESLint |
-| `npm run format` | Format with Prettier |
-| `npm run test` | Run tests (watch mode) |
-| `npm run test:run` | Run tests (single run) |
-| `npm run test:coverage` | Run tests with coverage |
-| `npm run setup` | Download tree-sitter grammar files |
+| `npm run test:run` | Run tests (204 tests) |
+| `npm run setup` | Download tree-sitter grammars |
+| `npm run lint` | ESLint |
+| `npm run format` | Prettier |
 
 ## Project Structure
 
 ```
 src/
   app/
-    (auth)/          # Login, OAuth callback
-    (dashboard)/     # Authenticated pages (Chat, Repositories, etc.)
-  components/
-    ui/              # shadcn/ui components
-    app-sidebar.tsx  # Navigation sidebar
-    theme-*.tsx      # Theme provider and toggle
+    (auth)/              # Login, OAuth callback
+    (dashboard)/         # Authenticated pages
+    api/repos/           # API route handlers
   lib/
-    supabase/        # Browser and server client factories
-    indexer/          # AST parser, language definitions
-    rag/             # RAG query engine (split 02)
-    graph/           # Knowledge graph (split 04)
-    auth/            # Auth helpers
-  types/             # Shared TypeScript types
+    storage/             # StorageProvider + Supabase implementation
+    github/              # Auth, API client, file cache
+    indexer/
+      ast-analyzer.ts    # Symbol/import/call/inheritance extraction
+      chunker.ts         # Semantic code chunking
+      file-filter.ts     # Smart file filtering
+      graph-builder.ts   # Knowledge graph edges
+      pipeline.ts        # Indexing orchestration
+      embedding/         # Ollama + OpenAI providers
+      queries/           # Tree-sitter query patterns
+    supabase/            # Client factories
+  types/                 # TypeScript types
+supabase/migrations/     # Database migrations
 ```
 
 ## Deployment
 
-Deploy to [Vercel](https://vercel.com). Connect the repo and set the environment variables in the Vercel dashboard.
+Deploy to [Vercel](https://vercel.com). Set env vars in Vercel dashboard. Apply migration to remote Supabase before using API endpoints.
