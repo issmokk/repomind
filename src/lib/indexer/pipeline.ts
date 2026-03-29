@@ -44,14 +44,14 @@ export async function startIndexingJob(
   const headBranch = repo.defaultBranch || metadata.defaultBranch
 
   const fileTree = await githubClient.getFileTree(owner, repoName, headBranch)
-  const headCommitSha = fileTree.length > 0 ? fileTree[0].sha : headBranch
+  const _headCommitSha = fileTree.length > 0 ? fileTree[0].sha : headBranch
 
-  let headSha: string
+  let _headSha: string
   try {
-    const comparison = await githubClient.compareCommits(owner, repoName, headBranch, headBranch)
-    headSha = headBranch
+    const _comparison = await githubClient.compareCommits(owner, repoName, headBranch, headBranch)
+    _headSha = headBranch
   } catch {
-    headSha = headBranch
+    _headSha = headBranch
   }
 
   const job = await storage.createJob({
@@ -143,7 +143,7 @@ export async function processNextBatch(
 
   await storage.updateJobProgress(jobId, { currentFile: null })
 
-  const repo = await storage.getRepository(repoId, {} as never) // service role reads
+  const repo = await storage.getRepository(repoId)
   if (!repo) throw new PipelineError('Repository not found', 404)
 
   const [owner, repoName] = repo.fullName.split('/')

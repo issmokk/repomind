@@ -6,10 +6,16 @@ export class GitHubClient {
   constructor(
     private auth: GitHubAuthProvider,
     private baseUrl = 'https://api.github.com',
-  ) {}
+  ) { }
 
   async getRepoMetadata(owner: string, repo: string): Promise<RepoInfo> {
-    const data = await this.request(`/repos/${owner}/${repo}`)
+    const data = await this.request<{
+      name: string
+      full_name: string
+      default_branch: string
+      html_url: string
+      private: boolean
+    }>(`/repos/${owner}/${repo}`)
     return {
       name: data.name,
       fullName: data.full_name,
@@ -20,9 +26,10 @@ export class GitHubClient {
   }
 
   async getFileTree(owner: string, repo: string, sha: string): Promise<FileTreeEntry[]> {
-    const data = await this.request(
-      `/repos/${owner}/${repo}/git/trees/${sha}?recursive=1`,
-    )
+    const data = await this.request<{
+      truncated: boolean
+      tree: Array<{ path: string; sha: string; size?: number; type: string }>
+    }>(`/repos/${owner}/${repo}/git/trees/${sha}?recursive=1`)
     if (data.truncated) {
       console.warn(`File tree for ${owner}/${repo} was truncated (>100k entries)`)
     }
@@ -44,7 +51,7 @@ export class GitHubClient {
     blobSha?: string,
   ): Promise<FileContent> {
     try {
-      const data = await this.request(
+      const data = await this.request<{ content: string; sha: string; size: number }>(
         `/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${ref}`,
       )
       const content = Buffer.from(data.content, 'base64').toString('utf-8')
@@ -65,9 +72,9 @@ export class GitHubClient {
     base: string,
     head: string,
   ): Promise<DiffEntry[]> {
-    const data = await this.request(
-      `/repos/${owner}/${repo}/compare/${base}...${head}`,
-    )
+    const data = await this.request<{
+      files?: Array<{ filename: string; status: string; previous_filename?: string; sha: string }>
+    }>(`/repos/${owner}/${repo}/compare/${base}...${head}`)
     return (data.files ?? []).map(
       (f: { filename: string; status: string; previous_filename?: string; sha: string }) => {
         let status = f.status as DiffEntry['status']
@@ -85,12 +92,12 @@ export class GitHubClient {
   }
 
   private async getBlob(owner: string, repo: string, sha: string): Promise<FileContent> {
-    const data = await this.request(`/repos/${owner}/${repo}/git/blobs/${sha}`)
+    const data = await this.request<{ content: string; sha: string; size: number }>(`/repos/${owner}/${repo}/git/blobs/${sha}`)
     const content = Buffer.from(data.content, 'base64').toString('utf-8')
     return { content, sha: data.sha, size: data.size, encoding: 'utf-8' }
   }
 
-  private async request(path: string): Promise<Record<string, any>> {
+  private async request<T = unknown>(path: string): Promise<T> {
     const headers = await this.auth.getHeaders()
     const response = await fetch(`${this.baseUrl}${path}`, { headers })
 
@@ -109,7 +116,8 @@ export class GitHubClient {
       throw new Error(`GitHub API error ${response.status}: ${body}`)
     }
 
-    return response.json() as Promise<Record<string, unknown>>
+    const data = await response.json()
+    return data as T
   }
 
   private async checkRateLimit(response: Response): Promise<void> {

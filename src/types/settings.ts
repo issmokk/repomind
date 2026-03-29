@@ -1,9 +1,26 @@
-export type EmbeddingProvider = 'ollama' | 'openai';
+export type EmbeddingProvider = 'ollama' | 'openai'
 
 export type TeamSettings = {
-  teamId: string;
-  embeddingProvider: EmbeddingProvider;
-  ollamaBaseUrl: string | null;
-  ollamaModel: string | null;
-  openaiModel: string | null;
-};
+  id: string
+  orgId: string
+  teamId: string
+  embeddingProvider: EmbeddingProvider
+  ollamaBaseUrl: string
+  ollamaModel: string
+  openaiModel: string
+  providerOrder: string[]
+  claudeApiKey: string | null
+  claudeModel: string
+  openaiApiKey: string | null
+  openaiLlmModel: string
+  cohereApiKey: string | null
+  maxGraphHops: number
+  searchTopK: number
+  searchRrfK: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type TeamSettingsUpdate = Partial<
+  Omit<TeamSettings, 'id' | 'orgId' | 'teamId' | 'createdAt' | 'updatedAt'>
+>

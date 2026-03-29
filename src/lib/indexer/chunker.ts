@@ -193,7 +193,7 @@ export function mergeSmallChunks(chunks: RawChunk[], lines: string[]): RawChunk[
   return result
 }
 
-export function addOverlap(chunks: RawChunk[], totalLines: number): RawChunk[] {
+export function addOverlap(chunks: RawChunk[], _totalLines: number): RawChunk[] {
   if (chunks.length <= 1) return chunks
   const result = [chunks[0]]
   for (let i = 1; i < chunks.length; i++) {

@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('ollama', () => {
-  class MockOllama { embed = vi.fn(); constructor(_opts?: unknown) {} }
+  class MockOllama { embed = vi.fn(); constructor(_opts?: unknown) { } }
   return { Ollama: MockOllama }
 })
 

@@ -40,6 +40,19 @@ for (const lang of SUPPORTED_LANGUAGES) {
   }
 }
 
+const runtimeWasm = join(WASM_DIR, 'web-tree-sitter.wasm');
+if (!existsSync(runtimeWasm)) {
+  const runtimeSrc = resolve(__dirname, '..', 'node_modules', 'web-tree-sitter', 'web-tree-sitter.wasm');
+  if (existsSync(runtimeSrc)) {
+    cpSync(runtimeSrc, runtimeWasm);
+    console.log('Copied: web-tree-sitter.wasm (runtime)');
+  } else {
+    console.warn('web-tree-sitter.wasm not found in node_modules');
+  }
+} else {
+  console.log('Already exists: web-tree-sitter.wasm (runtime)');
+}
+
 console.log(`\n${copied}/${SUPPORTED_LANGUAGES.length} grammar files ready.`);
 if (missing > 0) {
   console.error(`${missing} grammar(s) missing. Install additional prebuilt packages or build from source.`);

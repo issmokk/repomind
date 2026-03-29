@@ -15,7 +15,31 @@ import type {
   ChunkUpsert,
 } from '@/types/indexing'
 import type { GraphEdge, GraphEdgeInsert } from '@/types/graph'
+import type { TeamSettings, TeamSettingsUpdate } from '@/types/settings'
+import type { HybridSearchResult, NewChatMessage, ChatMessage, NewQueryFeedback } from '@/lib/rag/types'
 import type { StorageProvider } from './types'
+
+function maskApiKey(key: string | null): string | null {
+  if (!key) return null
+  if (key.length <= 4) return '****'
+  return '****' + key.slice(-4)
+}
+
+const DEFAULT_TEAM_SETTINGS: Omit<TeamSettings, 'id' | 'orgId' | 'teamId' | 'createdAt' | 'updatedAt'> = {
+  embeddingProvider: 'ollama' as const,
+  ollamaBaseUrl: 'http://localhost:11434',
+  ollamaModel: 'rjmalagon/gte-qwen2-1.5b-instruct-embed-f16',
+  openaiModel: 'text-embedding-3-small',
+  providerOrder: ['ollama'],
+  claudeApiKey: null,
+  claudeModel: 'claude-sonnet-4.6',
+  openaiApiKey: null,
+  openaiLlmModel: 'gpt-4o',
+  cohereApiKey: null,
+  maxGraphHops: 2,
+  searchTopK: 10,
+  searchRrfK: 60,
+}
 
 const STALE_JOB_THRESHOLD_MS = 5 * 60 * 1000
 const ACTIVE_STATUSES: IndexingJobStatus[] = ['pending', 'fetching_files', 'processing', 'embedding']
@@ -76,8 +100,9 @@ export class SupabaseStorageProvider implements StorageProvider {
     return (rows ?? []).map((r: Record<string, unknown>) => toCamelCase<Repository>(r))
   }
 
-  async getRepository(repoId: string, userClient: SupabaseClient): Promise<Repository | null> {
-    const result = await userClient
+  async getRepository(repoId: string, userClient?: SupabaseClient): Promise<Repository | null> {
+    const client = userClient ?? this.serviceClient
+    const result = await client
       .from('repositories')
       .select('*')
       .eq('id', repoId)
@@ -342,5 +367,188 @@ export class SupabaseStorageProvider implements StorageProvider {
       })
       .eq('id', job.id)
     assertNoError(result, 'markJobStale')
+  }
+
+  async hybridSearchChunks(
+    queryEmbedding: number[],
+    queryText: string,
+    repoIds: string[],
+    orgId: string,
+    options?: { topK?: number; rrfK?: number; overfetchFactor?: number }
+  ): Promise<HybridSearchResult[]> {
+    const result = await this.serviceClient.rpc('hybrid_search_chunks', {
+      query_embedding: queryEmbedding,
+      query_text: queryText,
+      filter_repo_ids: repoIds,
+      p_org_id: orgId,
+      match_count: options?.topK ?? 10,
+      rrf_k: options?.rrfK ?? 60,
+      overfetch_factor: options?.overfetchFactor ?? 4,
+    })
+    const rows = assertNoError(result, 'hybridSearchChunks')
+    return (rows ?? []).map((r: Record<string, unknown>) => toCamelCase<HybridSearchResult>(r))
+  }
+
+  async getRelatedEdgesBatch(
+    repoId: string,
+    sources: Array<{ filePath: string; symbolName: string }>,
+    options?: { depth?: number }
+  ): Promise<Array<{ source: { filePath: string; symbolName: string }; edges: GraphEdge[]; hop: number }>> {
+    const depth = options?.depth ?? 1
+    if (sources.length === 0) return []
+
+    const fetchEdgesForSources = async (
+      srcs: Array<{ filePath: string; symbolName: string }>
+    ): Promise<GraphEdge[]> => {
+      const queries = srcs.map((s) =>
+        this.serviceClient
+          .from('graph_edges')
+          .select('*')
+          .eq('repo_id', repoId)
+          .eq('source_file', s.filePath)
+          .eq('source_symbol', s.symbolName)
+      )
+      const results = await Promise.all(queries)
+      const allEdges: GraphEdge[] = []
+      for (const result of results) {
+        const rows = assertNoError(result, 'getRelatedEdgesBatch')
+        for (const r of rows ?? []) {
+          allEdges.push(toCamelCase<GraphEdge>(r as Record<string, unknown>))
+        }
+      }
+      return allEdges
+    }
+
+    const hop1Edges = await fetchEdgesForSources(sources)
+    const seenEdgeIds = new Set<number>()
+    const results: Array<{ source: { filePath: string; symbolName: string }; edges: GraphEdge[]; hop: number }> = []
+
+    for (const source of sources) {
+      const matching = hop1Edges.filter(
+        (e) => e.sourceFile === source.filePath && e.sourceSymbol === source.symbolName && !seenEdgeIds.has(e.id)
+      )
+      for (const e of matching) seenEdgeIds.add(e.id)
+      if (matching.length > 0) {
+        results.push({ source, edges: matching, hop: 1 })
+      }
+    }
+
+    if (depth >= 2 && hop1Edges.length > 0) {
+      const seenKeys = new Set(sources.map((s) => `${s.filePath}:${s.symbolName}`))
+      const hop2Sources: Array<{ filePath: string; symbolName: string }> = []
+
+      for (const edge of hop1Edges) {
+        if (edge.targetFile && edge.targetSymbol) {
+          const key = `${edge.targetFile}:${edge.targetSymbol}`
+          if (!seenKeys.has(key)) {
+            seenKeys.add(key)
+            hop2Sources.push({ filePath: edge.targetFile, symbolName: edge.targetSymbol })
+          }
+        }
+      }
+
+      if (hop2Sources.length > 0) {
+        const hop2Edges = await fetchEdgesForSources(hop2Sources)
+
+        for (const source of hop2Sources) {
+          const matching = hop2Edges.filter(
+            (e) => e.sourceFile === source.filePath && e.sourceSymbol === source.symbolName && !seenEdgeIds.has(e.id)
+          )
+          for (const e of matching) seenEdgeIds.add(e.id)
+          if (matching.length > 0) {
+            results.push({ source, edges: matching, hop: 2 })
+          }
+        }
+      }
+    }
+
+    return results
+  }
+
+  async saveMessage(data: NewChatMessage): Promise<ChatMessage> {
+    const result = await this.serviceClient
+      .from('chat_messages')
+      .insert(toSnakeCase(data as unknown as Record<string, unknown>))
+      .select()
+      .single()
+    return toCamelCase<ChatMessage>(assertNoError(result, 'saveMessage'))
+  }
+
+  async getMessages(
+    userId: string,
+    orgId: string,
+    userClient: SupabaseClient,
+    options?: { limit?: number; offset?: number }
+  ): Promise<ChatMessage[]> {
+    const limit = options?.limit ?? 50
+    const offset = options?.offset ?? 0
+
+    const result = await userClient
+      .from('chat_messages')
+      .select('*')
+      .eq('org_id', orgId)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    const rows = assertNoError(result, 'getMessages')
+    return (rows ?? []).map((r: Record<string, unknown>) => toCamelCase<ChatMessage>(r))
+  }
+
+  async saveFeedback(data: NewQueryFeedback): Promise<void> {
+    const result = await this.serviceClient
+      .from('query_feedback')
+      .insert(toSnakeCase(data as unknown as Record<string, unknown>))
+    assertNoError(result, 'saveFeedback')
+  }
+
+  async getTeamSettings(orgId: string): Promise<TeamSettings> {
+    const result = await this.serviceClient
+      .from('team_settings')
+      .select('*')
+      .eq('org_id', orgId)
+      .maybeSingle()
+
+    const { data, error } = result
+    if (error) {
+      throw new Error(`Storage error in getTeamSettings: ${error.message}`)
+    }
+
+    if (!data) {
+      return {
+        id: '',
+        orgId,
+        teamId: orgId,
+        ...DEFAULT_TEAM_SETTINGS,
+        createdAt: '',
+        updatedAt: '',
+      }
+    }
+
+    const settings = toCamelCase<TeamSettings>(data)
+    settings.teamId = settings.orgId
+    settings.claudeApiKey = maskApiKey(settings.claudeApiKey)
+    settings.openaiApiKey = maskApiKey(settings.openaiApiKey)
+    settings.cohereApiKey = maskApiKey(settings.cohereApiKey)
+    return settings
+  }
+
+  async updateTeamSettings(orgId: string, data: TeamSettingsUpdate): Promise<TeamSettings> {
+    const snakeData = toSnakeCase(data as unknown as Record<string, unknown>)
+    snakeData.org_id = orgId
+
+    const result = await this.serviceClient
+      .from('team_settings')
+      .upsert(snakeData, { onConflict: 'org_id' })
+      .select()
+      .single()
+
+    const row = assertNoError(result, 'updateTeamSettings')
+    const settings = toCamelCase<TeamSettings>(row)
+    settings.teamId = settings.orgId
+    settings.claudeApiKey = maskApiKey(settings.claudeApiKey)
+    settings.openaiApiKey = maskApiKey(settings.openaiApiKey)
+    settings.cohereApiKey = maskApiKey(settings.cohereApiKey)
+    return settings
   }
 }

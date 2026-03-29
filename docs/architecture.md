@@ -6,7 +6,16 @@
 graph TB
     subgraph "Frontend (Next.js 16)"
         UI[Dashboard UI]
+        CHAT[Chat UI]
         API[API Route Handlers]
+    end
+
+    subgraph "RAG Query Engine"
+        QA[Query Analyzer]
+        RET[Retriever]
+        PB[Prompt Builder]
+        PR[Provider Registry]
+        EV[Evaluation Harness]
     end
 
     subgraph "Indexing Pipeline"
@@ -25,16 +34,28 @@ graph TB
         GHA[GitHub API]
         OLL[Ollama]
         OAI[OpenAI]
+        ANT[Anthropic Claude]
+        COH[Cohere]
     end
 
     subgraph "Storage (Supabase)"
         PG[(PostgreSQL)]
-        PGV[(pgvector)]
+        PGV[(pgvector + FTS)]
         AUTH[Supabase Auth]
     end
 
     UI --> API
+    CHAT --> API
     API --> PO
+    API --> RET
+    RET --> QA
+    RET --> PGV
+    RET --> PB
+    PB --> PR
+    PR --> OLL
+    PR --> OAI
+    PR --> ANT
+    RET --> COH
     PO --> GH
     GH --> GHA
     GH --> FC
@@ -307,12 +328,12 @@ graph TD
     PACK --> MERGE[Merge Small Chunks]
     MERGE --> OVERLAP[Add Overlap]
     OVERLAP --> CTX[Prepend Context Header]
-    CTX --> CHUNKS[ChunkResult[]]
+    CTX --> CHUNKS["ChunkResult[]"]
 
     IMP --> RESOLVE[Import Resolution]
     CALL --> |callee lookup| RESOLVE
     INH --> |parent lookup| RESOLVE
-    RESOLVE --> EDGES[GraphEdgeInsert[]]
+    RESOLVE --> EDGES["GraphEdgeInsert[]"]
 
     CHUNKS --> EMBED[Embedding Provider]
     EMBED --> STORE[Supabase pgvector]
@@ -323,21 +344,24 @@ graph TD
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Pending: POST /api/repos/:id/index
-    Pending --> FetchingFiles: Fetch file tree
-    FetchingFiles --> Processing: Files filtered
+    [*] --> Pending
+    note right of Pending
+        POST /api/repos/id/index
+    end note
+    Pending --> FetchingFiles : Fetch file tree
+    FetchingFiles --> Processing : Files filtered
 
-    Processing --> Processing: POST /api/repos/:id/index/process
+    Processing --> Processing : POST next batch
     note right of Processing
         Each call processes 1-5 files
         Updates heartbeat
         Client polls with Retry-After: 2
     end note
 
-    Processing --> Completed: All files done, 0 failures
-    Processing --> Partial: All files done, some failures
-    Processing --> Failed: Stale (no heartbeat > 5min)
-    Processing --> Failed: Embedding validation error
+    Processing --> Completed : All files done, 0 failures
+    Processing --> Partial : All files done, some failures
+    Processing --> Failed : Stale (no heartbeat > 5min)
+    Processing --> Failed : Embedding validation error
 
     Completed --> [*]
     Partial --> [*]
@@ -394,6 +418,124 @@ graph TB
     ROUTES -->|writes via pipeline| SC
     UC --> RLS
     SC --> SECDEF
-    SECDEF -->|match_code_chunks| RLS
+    SECDEF -->|hybrid_search_chunks| RLS
     SECDEF -->|upsert_file_chunks with org_id check| RLS
+```
+
+## RAG Query Pipeline
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Chat UI (useChat)
+    participant API as POST /api/chat
+    participant QA as Query Analyzer
+    participant RET as Retriever
+    participant EP as Embedding Provider
+    participant DB as Supabase (hybrid_search_chunks)
+    participant GE as Graph Edges
+    participant PB as Prompt Builder
+    participant LLM as LLM Provider (Ollama/Claude/OpenAI)
+
+    U->>UI: Type question, select repos
+    UI->>API: sendMessage({ text, repoIds })
+    API->>QA: analyzeQuery(question)
+    QA-->>API: { queryType, suggestedGraphDepth }
+    API->>EP: embedSingle(question)
+    EP-->>API: vector[1536]
+    API->>DB: hybrid_search_chunks(vector, text, repoIds)
+    Note over DB: pgvector cosine + FTS tsvector<br/>Reciprocal Rank Fusion (k=60)
+    DB-->>RET: ranked chunks with RRF scores
+    RET->>GE: getRelatedEdgesBatch(symbols, depth)
+    GE-->>RET: graph context (1-2 hops)
+    RET-->>API: RetrievalResult + confidence
+    API->>PB: buildContextWindow(query, result)
+    PB-->>API: { systemPrompt, contextChunks }
+    API->>LLM: streamText(model, system, messages)
+    LLM-->>UI: SSE stream (text chunks)
+    API->>DB: after() -> saveMessage(answer, sources)
+```
+
+## RAG Module Dependency Graph
+
+```mermaid
+graph LR
+    subgraph "RAG Layer"
+        RT[rag/types]
+        QA[rag/query-analyzer]
+        RET[rag/retriever]
+        PB[rag/prompt-builder]
+        PR[rag/providers]
+        EV[rag/__eval__/metrics]
+        ER[rag/__eval__/runner]
+    end
+
+    subgraph "Chat API"
+        CR[api/chat/route]
+        CH[api/chat/history]
+        CF[api/chat/feedback]
+        CS[api/settings/team]
+    end
+
+    subgraph "Chat UI"
+        CI[components/chat/chat-interface]
+        CM[components/chat/chat-messages]
+        CIN[components/chat/chat-input]
+        SP[components/chat/source-panel]
+    end
+
+    RET --> RT & QA & PR
+    PB --> RT
+    CR --> RET & PB & PR & QA
+    CH --> ST
+    CF --> ST
+    CS --> ST
+    CI --> CM & CIN & SP
+    ER --> RET & PB & EV
+
+    ST[storage/supabase]
+    RET --> ST
+```
+
+## New Database Tables (Split 02)
+
+```mermaid
+erDiagram
+    repositories ||--o{ chat_messages : "queried via"
+    chat_messages ||--o{ query_feedback : "rated by"
+    team_settings {
+        uuid id PK
+        uuid org_id UK
+        text embedding_provider
+        text ollama_base_url
+        text[] provider_order
+        text claude_api_key
+        text openai_api_key
+        text cohere_api_key
+        integer max_graph_hops
+        integer search_top_k
+        integer search_rrf_k
+    }
+
+    chat_messages {
+        uuid id PK
+        uuid org_id
+        uuid user_id
+        uuid session_id
+        uuid[] repo_ids
+        text question
+        text answer
+        jsonb sources
+        text confidence
+        text model_used
+        integer retrieval_latency_ms
+    }
+
+    query_feedback {
+        uuid id PK
+        uuid message_id FK
+        uuid user_id
+        text rating
+        text comment
+    }
 ```

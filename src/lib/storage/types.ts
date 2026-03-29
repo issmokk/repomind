@@ -15,11 +15,13 @@ import type {
   ChunkUpsert,
 } from '@/types/indexing'
 import type { GraphEdge, GraphEdgeInsert } from '@/types/graph'
+import type { TeamSettings, TeamSettingsUpdate } from '@/types/settings'
+import type { HybridSearchResult, NewChatMessage, ChatMessage, NewQueryFeedback } from '@/lib/rag/types'
 
 export interface StorageProvider {
   createRepository(data: NewRepository): Promise<Repository>
   getRepositories(userClient: SupabaseClient): Promise<Repository[]>
-  getRepository(repoId: string, userClient: SupabaseClient): Promise<Repository | null>
+  getRepository(repoId: string, userClient?: SupabaseClient): Promise<Repository | null>
   deleteRepository(repoId: string): Promise<void>
   updateRepository(repoId: string, data: Partial<Repository>): Promise<Repository>
 
@@ -48,4 +50,33 @@ export interface StorageProvider {
   getActiveJob(repoId: string): Promise<IndexingJob | null>
   getLatestJob(repoId: string, userClient: SupabaseClient): Promise<IndexingJob | null>
   markJobStale(job: IndexingJob): Promise<void>
+
+  hybridSearchChunks(
+    queryEmbedding: number[],
+    queryText: string,
+    repoIds: string[],
+    orgId: string,
+    options?: { topK?: number; rrfK?: number; overfetchFactor?: number }
+  ): Promise<HybridSearchResult[]>
+
+  getRelatedEdgesBatch(
+    repoId: string,
+    sources: Array<{ filePath: string; symbolName: string }>,
+    options?: { depth?: number }
+  ): Promise<Array<{ source: { filePath: string; symbolName: string }; edges: GraphEdge[]; hop: number }>>
+
+  saveMessage(data: NewChatMessage): Promise<ChatMessage>
+
+  getMessages(
+    userId: string,
+    orgId: string,
+    userClient: SupabaseClient,
+    options?: { limit?: number; offset?: number }
+  ): Promise<ChatMessage[]>
+
+  saveFeedback(data: NewQueryFeedback): Promise<void>
+
+  getTeamSettings(orgId: string): Promise<TeamSettings>
+
+  updateTeamSettings(orgId: string, data: TeamSettingsUpdate): Promise<TeamSettings>
 }

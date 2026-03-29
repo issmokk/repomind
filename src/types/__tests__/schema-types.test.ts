@@ -11,11 +11,11 @@ import type {
   IndexingJobTrigger,
   IndexingJob,
   CodeChunk,
-  ChunkResult,
-  FileMetadata,
+  ChunkResult as _ChunkResult,
+  FileMetadata as _FileMetadata,
 } from '../indexing'
 import type { RelationshipType, GraphEdge } from '../graph'
-import type { EmbeddingProviderName, EmbeddingConfig } from '../embedding'
+import type { EmbeddingProviderName as _EmbeddingProviderName, EmbeddingConfig } from '../embedding'
 
 describe('Schema Types', () => {
   describe('Repository', () => {

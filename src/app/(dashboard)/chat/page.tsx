@@ -1,18 +1,28 @@
-import { MessageSquare } from 'lucide-react';
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { SupabaseStorageProvider } from '@/lib/storage/supabase'
+import { ChatInterface } from '@/components/chat/chat-interface'
 
-export default function ChatPage() {
+export default async function ChatPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  const storage = new SupabaseStorageProvider()
+  const repos = await storage.getRepositories(supabase)
+
+  const repoProps = repos.map((r) => ({
+    id: r.id,
+    name: r.name,
+    fullName: r.fullName,
+  }))
+
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-        <MessageSquare className="h-8 w-8 text-primary" />
-      </div>
-      <div>
-        <h1 className="text-xl font-semibold">Chat</h1>
-        <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-          Chat with your indexed codebases using RAG-powered AI. Index a repository first to get
-          started.
-        </p>
-      </div>
+    <div className="h-[calc(100vh-4rem)]">
+      <ChatInterface repos={repoProps} />
     </div>
-  );
+  )
 }

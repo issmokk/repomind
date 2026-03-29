@@ -4,11 +4,15 @@ import { Parser, Language, type Tree } from 'web-tree-sitter';
 let initialized = false;
 const languageCache = new Map<string, Language>();
 
+function wasmDir(): string {
+  return path.resolve(process.cwd(), 'wasm');
+}
+
 export async function initTreeSitter() {
   if (initialized) return;
   await Parser.init({
     locateFile(scriptName: string) {
-      return path.resolve(__dirname, '..', '..', '..', '..', 'wasm', scriptName);
+      return path.join(wasmDir(), scriptName);
     },
   });
   initialized = true;
@@ -18,15 +22,7 @@ export async function getLanguage(name: string): Promise<Language> {
   const cached = languageCache.get(name);
   if (cached) return cached;
 
-  const wasmPath = path.resolve(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    '..',
-    'wasm',
-    `tree-sitter-${name}.wasm`,
-  );
+  const wasmPath = path.join(wasmDir(), `tree-sitter-${name}.wasm`);
   const language = await Language.load(wasmPath);
   languageCache.set(name, language);
   return language;

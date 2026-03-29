@@ -33,6 +33,7 @@ export async function POST(
       totalFiles: job.totalFiles,
     })
   } catch (err) {
+    console.error('Indexing failed:', err)
     if (err instanceof PipelineError && err.statusCode === 409) {
       return NextResponse.json({ error: err.message }, { status: 409 })
     }
