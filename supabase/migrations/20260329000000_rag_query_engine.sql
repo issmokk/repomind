@@ -57,14 +57,14 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   fetch_count int;
   fts_query tsquery;
 BEGIN
   fetch_count := LEAST(match_count * overfetch_factor, 200);
-  SET LOCAL hnsw.iterative_scan = on;
+  SET LOCAL hnsw.iterative_scan = relaxed_order;
 
   IF query_text IS NOT NULL AND query_text <> '' THEN
     fts_query := websearch_to_tsquery('english', query_text);
