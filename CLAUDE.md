@@ -45,11 +45,24 @@ This project uses shadcn/ui v4 which is built on `@base-ui/react`, not Radix UI.
 - Tests colocated next to source files (`*.test.ts` / `*.test.tsx`)
 - web-tree-sitter must be fully mocked in tests (WASM not available in jsdom). Use a class mock for `Parser` since `vi.fn()` is not constructable.
 
+## Implementation Quality Rules
+
+When using `/deep-implement` or implementing code in sections:
+
+1. **After each section commit**: Run `npm run lint` and fix all errors/warnings before moving to the next section. Do not let lint debt accumulate.
+2. **After each section commit**: Run `npm run test:run` to verify all tests pass.
+3. **After all sections in a split are done**: Review and update `README.md` and `docs/architecture.md` to reflect new modules, data flows, ER diagrams, and commands. Commit doc updates separately.
+4. **Before marking a split complete**: Run `npm run build` to verify production build passes (strict mode catches errors vitest misses).
+5. **Never skip code review**: Every section gets a code-reviewer subagent. Every review gets triaged and important findings get fixed.
+
+Quality and accuracy over speed. Do not rush. Patches and debt accumulate fast when verification steps are skipped.
+
 ## Commands
 
 ```
 npm run dev          # Start dev server
 npm run test:run     # Run tests (single run)
+npm run eval         # Run RAG evaluation harness (separate from tests)
 npm run setup        # Download tree-sitter grammar WASM files
 npm run lint         # ESLint
 npm run format       # Prettier
