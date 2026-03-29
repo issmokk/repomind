@@ -21,7 +21,7 @@ import type { HybridSearchResult, NewChatMessage, ChatMessage, NewQueryFeedback 
 export interface StorageProvider {
   createRepository(data: NewRepository): Promise<Repository>
   getRepositories(userClient: SupabaseClient): Promise<Repository[]>
-  getRepository(repoId: string, userClient: SupabaseClient): Promise<Repository | null>
+  getRepository(repoId: string, userClient?: SupabaseClient): Promise<Repository | null>
   deleteRepository(repoId: string): Promise<void>
   updateRepository(repoId: string, data: Partial<Repository>): Promise<Repository>
 

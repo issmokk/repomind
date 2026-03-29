@@ -143,7 +143,7 @@ export async function processNextBatch(
 
   await storage.updateJobProgress(jobId, { currentFile: null })
 
-  const repo = await storage.getRepository(repoId, {} as never) // service role reads
+  const repo = await storage.getRepository(repoId)
   if (!repo) throw new PipelineError('Repository not found', 404)
 
   const [owner, repoName] = repo.fullName.split('/')

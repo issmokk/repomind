@@ -100,8 +100,9 @@ export class SupabaseStorageProvider implements StorageProvider {
     return (rows ?? []).map((r: Record<string, unknown>) => toCamelCase<Repository>(r))
   }
 
-  async getRepository(repoId: string, userClient: SupabaseClient): Promise<Repository | null> {
-    const result = await userClient
+  async getRepository(repoId: string, userClient?: SupabaseClient): Promise<Repository | null> {
+    const client = userClient ?? this.serviceClient
+    const result = await client
       .from('repositories')
       .select('*')
       .eq('id', repoId)
