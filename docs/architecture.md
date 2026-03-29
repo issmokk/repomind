@@ -307,12 +307,12 @@ graph TD
     PACK --> MERGE[Merge Small Chunks]
     MERGE --> OVERLAP[Add Overlap]
     OVERLAP --> CTX[Prepend Context Header]
-    CTX --> CHUNKS[ChunkResult[]]
+    CTX --> CHUNKS["ChunkResult[]"]
 
     IMP --> RESOLVE[Import Resolution]
     CALL --> |callee lookup| RESOLVE
     INH --> |parent lookup| RESOLVE
-    RESOLVE --> EDGES[GraphEdgeInsert[]]
+    RESOLVE --> EDGES["GraphEdgeInsert[]"]
 
     CHUNKS --> EMBED[Embedding Provider]
     EMBED --> STORE[Supabase pgvector]
@@ -323,21 +323,24 @@ graph TD
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Pending: POST /api/repos/:id/index
-    Pending --> FetchingFiles: Fetch file tree
-    FetchingFiles --> Processing: Files filtered
+    [*] --> Pending
+    note right of Pending
+        POST /api/repos/id/index
+    end note
+    Pending --> FetchingFiles : Fetch file tree
+    FetchingFiles --> Processing : Files filtered
 
-    Processing --> Processing: POST /api/repos/:id/index/process
+    Processing --> Processing : POST next batch
     note right of Processing
         Each call processes 1-5 files
         Updates heartbeat
         Client polls with Retry-After: 2
     end note
 
-    Processing --> Completed: All files done, 0 failures
-    Processing --> Partial: All files done, some failures
-    Processing --> Failed: Stale (no heartbeat > 5min)
-    Processing --> Failed: Embedding validation error
+    Processing --> Completed : All files done, 0 failures
+    Processing --> Partial : All files done, some failures
+    Processing --> Failed : Stale (no heartbeat > 5min)
+    Processing --> Failed : Embedding validation error
 
     Completed --> [*]
     Partial --> [*]
