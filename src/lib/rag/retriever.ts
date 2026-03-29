@@ -90,24 +90,23 @@ export async function retrieveContext(
   if (config.cohereApiKey) {
     try {
       const { rerank } = await import('ai')
-      const { cohere } = await import('@ai-sdk/cohere')
+      const { createCohere } = await import('@ai-sdk/cohere')
+      const cohere = createCohere({ apiKey: config.cohereApiKey })
       const reranked = await rerank({
-        model: cohere.reranker('rerank-v3.5', {
-          apiKey: config.cohereApiKey,
-        }),
+        model: cohere.reranking('rerank-v3.5'),
         query,
         documents: chunks.map(
           (c) => c.contextualizedContent ?? c.content
         ),
         topN: config.searchTopK,
       })
-      rankedChunks = reranked.results.map((r) => chunks[r.index])
+      rankedChunks = reranked.ranking.map((r) => chunks[r.originalIndex])
     } catch (err) {
       console.warn('Cohere reranking failed, falling back to RRF order:', err instanceof Error ? err.message : err)
     }
   }
 
-  let graphContext: GraphContextEntry[] = []
+  const graphContext: GraphContextEntry[] = []
   if (config.maxGraphHops > 0 && rankedChunks.length > 0) {
     const sourcesPerRepo = new Map<
       string,

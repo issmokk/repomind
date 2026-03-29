@@ -1,4 +1,4 @@
-import type { SourceReference } from '../types'
+import type { SourceReference as _SourceReference } from '../types'
 
 export type EvalTestCase = {
   question: string

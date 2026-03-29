@@ -23,14 +23,13 @@ export function ChatInterface({ repos }: { repos: Repo[] }) {
 
   const { messages, sendMessage, status, error } = useChat({
     transport,
-    body: { repoIds: selectedRepoIds },
   })
 
   const isLoading = status === 'streaming' || status === 'submitted'
 
   function handleSend() {
     if (inputValue.trim() && !isLoading) {
-      sendMessage({ text: inputValue })
+      sendMessage({ text: inputValue }, { body: { repoIds: selectedRepoIds } })
       setInputValue('')
     }
   }

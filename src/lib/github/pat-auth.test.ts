@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach as _beforeEach, afterEach } from 'vitest'
 import { PersonalAccessTokenAuth } from './pat-auth'
 
 describe('PersonalAccessTokenAuth', () => {

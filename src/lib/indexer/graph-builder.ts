@@ -1,5 +1,5 @@
 import type { ImportInfo, CallSiteInfo, InheritanceInfo } from './ast-analyzer'
-import type { GraphEdgeInsert, RelationshipType } from '@/types/graph'
+import type { GraphEdgeInsert, RelationshipType as _RelationshipType } from '@/types/graph'
 import { resolveImport } from './import-resolver'
 
 export interface ASTAnalysisResult {

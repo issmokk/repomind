@@ -1,11 +1,11 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach as _beforeEach } from 'vitest'
 import { startIndexingJob, processNextBatch, checkAndMarkStaleJob, PipelineError } from '../pipeline'
 import type { Repository } from '@/types/repository'
-import type { IndexingJob, FileToProcess } from '@/types/indexing'
+import type { IndexingJob, FileToProcess as _FileToProcess } from '@/types/indexing'
 
 vi.mock('../parser', () => ({
-  initTreeSitter: vi.fn(async () => {}),
+  initTreeSitter: vi.fn(async () => { }),
   getLanguage: vi.fn(async () => ({ query: vi.fn(() => ({ captures: vi.fn(() => []) })) })),
   parseCode: vi.fn(() => ({
     rootNode: {
@@ -88,7 +88,7 @@ function createInMemoryStorage(): Record<string, unknown> & { _state: StorageSta
       const all = Object.values(state.jobs).filter((j) => j.repoId === repoId)
       return all[all.length - 1] ?? null
     }),
-    bulkInvalidateCache: fn(async () => {}),
+    bulkInvalidateCache: fn(async () => { }),
     upsertChunks: fn(async (newChunks: Record<string, unknown>[]) => { state.chunks.push(...newChunks) }),
     upsertEdges: fn(async (newEdges: Record<string, unknown>[]) => { state.edges.push(...newEdges) }),
     deleteChunksByFile: fn(async (_repoId: string, filePath: string) => {
@@ -101,7 +101,7 @@ function createInMemoryStorage(): Record<string, unknown> & { _state: StorageSta
       if (state.jobs[job.id]) {
         state.jobs[job.id].status = 'failed'
         state.jobs[job.id].errorLog = [...(state.jobs[job.id].errorLog ?? []),
-          { error: 'stale: no heartbeat for over 5 minutes', timestamp: new Date().toISOString() }]
+        { error: 'stale: no heartbeat for over 5 minutes', timestamp: new Date().toISOString() }]
       }
     }),
     getSettings: fn(async () => ({ embeddingProvider: 'ollama' })),
@@ -122,23 +122,23 @@ function createMockGitHub(files = DEFAULT_FILES) {
   } as never
 }
 
-let embedCallCount = 0
+let _embedCallCount = 0
 function createMockCache() {
   return {
     fetchOrCacheFile: fn(async (_repoId: string, _o: string, _r: string, path: string) => ({
       content: `// content of ${path}`, sha: `sha-${path}`, size: 50, encoding: 'utf-8',
     })),
-    clearCacheForRepo: fn(async () => {}),
+    clearCacheForRepo: fn(async () => { }),
   } as never
 }
 
 function createMockEmbedding(shouldFail = false) {
-  embedCallCount = 0
+  _embedCallCount = 0
   return {
     name: 'mock', dimensions: 1536,
     validateDimensions: fn(async () => { if (shouldFail) throw new Error('dimension mismatch: expected 1536, got 768') }),
     embed: fn(async (texts: string[]) => texts.map((t) => {
-      embedCallCount++
+      _embedCallCount++
       const hash = [...t].reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0)
       return Array.from({ length: 1536 }, (_, i) => (hash + i) / 10000)
     })),
@@ -225,9 +225,9 @@ describe('Integration: Full Indexing Pipeline', () => {
       expect(initialChunkCount).toBe(3)
 
       const gh = createMockGitHub()
-      ;(gh as Record<string, ReturnType<typeof fn>>).compareCommits.mockResolvedValue([
-        { filename: 'src/index.ts', status: 'modified', sha: 'new-sha' },
-      ])
+        ; (gh as Record<string, ReturnType<typeof fn>>).compareCommits.mockResolvedValue([
+          { filename: 'src/index.ts', status: 'modified', sha: 'new-sha' },
+        ])
 
       const repoWithCommit = { ...REPO, lastIndexedCommit: 'prev-sha' }
       await startIndexingJob(repoWithCommit, storage as never, gh, createMockCache(), createMockEmbedding())
@@ -242,9 +242,9 @@ describe('Integration: Full Indexing Pipeline', () => {
       expect(storage._state.chunks.length).toBe(3)
 
       const gh = createMockGitHub()
-      ;(gh as Record<string, ReturnType<typeof fn>>).compareCommits.mockResolvedValue([
-        { filename: 'src/index.ts', status: 'removed', sha: '' },
-      ])
+        ; (gh as Record<string, ReturnType<typeof fn>>).compareCommits.mockResolvedValue([
+          { filename: 'src/index.ts', status: 'removed', sha: '' },
+        ])
 
       const repoWithCommit = { ...REPO, lastIndexedCommit: 'prev-sha' }
       await startIndexingJob(repoWithCommit, storage as never, gh, createMockCache(), createMockEmbedding())
@@ -258,9 +258,9 @@ describe('Integration: Full Indexing Pipeline', () => {
       const storage = await setupFullIndex(createInMemoryStorage())
 
       const gh = createMockGitHub()
-      ;(gh as Record<string, ReturnType<typeof fn>>).compareCommits.mockResolvedValue([
-        { filename: 'src/renamed.ts', status: 'renamed', previousFilename: 'src/index.ts', sha: 'sha-new' },
-      ])
+        ; (gh as Record<string, ReturnType<typeof fn>>).compareCommits.mockResolvedValue([
+          { filename: 'src/renamed.ts', status: 'renamed', previousFilename: 'src/index.ts', sha: 'sha-new' },
+        ])
 
       const repoWithCommit = { ...REPO, lastIndexedCommit: 'prev-sha' }
       await startIndexingJob(repoWithCommit, storage as never, gh, createMockCache(), createMockEmbedding())
@@ -286,11 +286,11 @@ describe('Integration: Full Indexing Pipeline', () => {
     it('continues after file failure, marks partial, logs error', async () => {
       const cache = createMockCache()
       let callCount = 0
-      ;(cache as Record<string, ReturnType<typeof fn>>).fetchOrCacheFile.mockImplementation(async () => {
-        callCount++
-        if (callCount === 2) throw new Error('network error on file 2')
-        return { content: '// ok', sha: 'sha', size: 10, encoding: 'utf-8' }
-      })
+        ; (cache as Record<string, ReturnType<typeof fn>>).fetchOrCacheFile.mockImplementation(async () => {
+          callCount++
+          if (callCount === 2) throw new Error('network error on file 2')
+          return { content: '// ok', sha: 'sha', size: 10, encoding: 'utf-8' }
+        })
 
       const storage = createInMemoryStorage()
       const job = await startIndexingJob(REPO, storage as never, createMockGitHub(), cache, createMockEmbedding())

@@ -7,7 +7,7 @@ import {
   buildContextWindow,
   PROMPT_TEMPLATES,
 } from './prompt-builder'
-import type { RetrievalResult, HybridSearchResult, GraphContextEntry } from './types'
+import type { RetrievalResult as _RetrievalResult, HybridSearchResult, GraphContextEntry as _GraphContextEntry } from './types'
 
 function makeChunk(overrides: Partial<HybridSearchResult> = {}): HybridSearchResult {
   return {

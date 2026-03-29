@@ -1,6 +1,6 @@
 import type {
   RetrievalResult,
-  HybridSearchResult,
+  HybridSearchResult as _HybridSearchResult,
   GraphContextEntry,
   ContextWindow,
   PromptTemplate,
@@ -98,7 +98,7 @@ export function formatChunk(
     symbolType?: string | null
     contextualizedContent: string
   },
-  isGraphContext?: boolean
+  _isGraphContext?: boolean
 ): string {
   const lines = [`--- Source: ${chunk.filePath} (lines ${chunk.startLine}-${chunk.endLine}) ---`]
 

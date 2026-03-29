@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest'
-import { chunkFile, countNonWhitespace, buildScopeTree, mergeSmallChunks, addOverlap } from './chunker'
+import { chunkFile, countNonWhitespace, buildScopeTree, mergeSmallChunks as _mergeSmallChunks, addOverlap as _addOverlap } from './chunker'
 import type { SymbolInfo } from './ast-analyzer'
 
 function makeSymbol(overrides: Partial<SymbolInfo> & { name: string; startLine: number; endLine: number }): SymbolInfo {

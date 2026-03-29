@@ -5,7 +5,7 @@ import type { IndexingJob } from '@/types/indexing'
 
 function createMockClient(returnValue: unknown = { data: null, error: null }) {
   const from = vi.fn(() => {
-    const proxy: Record<string, unknown> = {}
+    const _proxy: Record<string, unknown> = {}
     const makeChainable = (): Record<string, unknown> => {
       return new Proxy({} as Record<string, unknown>, {
         get(_, prop: string) {

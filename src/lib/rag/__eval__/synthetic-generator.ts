@@ -12,7 +12,7 @@ export async function generateSyntheticDataset(
   const count = options?.count ?? 20
   const factualCount = Math.round(count * 0.5)
   const multiContextCount = Math.round(count * 0.35)
-  const reasoningCount = count - factualCount - multiContextCount
+  const _reasoningCount = count - factualCount - multiContextCount
 
   const testCases: EvalTestCase[] = []
 

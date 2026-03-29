@@ -27,12 +27,6 @@ export async function POST(req: Request) {
   }
 
   try {
-    const messages = await auth.storage.getMessages(
-      auth.userId,
-      auth.orgId,
-      auth.supabase,
-      { limit: 1, offset: 0 }
-    )
     const allOrgMessages = await auth.supabase
       .from('chat_messages')
       .select('id')

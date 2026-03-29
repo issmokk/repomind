@@ -18,7 +18,7 @@ function getMessageText(message: UIMessage): string {
     .join('')
 }
 
-export function ChatMessages({ messages, onSelectSources }: Props) {
+export function ChatMessages({ messages, onSelectSources: _onSelectSources }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -39,11 +39,10 @@ export function ChatMessages({ messages, onSelectSources }: Props) {
             className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[80%] rounded-lg px-4 py-3 ${
-                isUser
+              className={`max-w-[80%] rounded-lg px-4 py-3 ${isUser
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted'
-              }`}
+                }`}
             >
               <div className="text-sm whitespace-pre-wrap">{text}</div>
               {!isUser && text.length > 0 && (
