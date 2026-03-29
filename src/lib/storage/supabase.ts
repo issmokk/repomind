@@ -28,7 +28,7 @@ function maskApiKey(key: string | null): string | null {
 const DEFAULT_TEAM_SETTINGS: Omit<TeamSettings, 'id' | 'orgId' | 'teamId' | 'createdAt' | 'updatedAt'> = {
   embeddingProvider: 'ollama' as const,
   ollamaBaseUrl: 'http://localhost:11434',
-  ollamaModel: 'gte-qwen2-1.5b-instruct',
+  ollamaModel: 'rjmalagon/gte-qwen2-1.5b-instruct-embed-f16',
   openaiModel: 'text-embedding-3-small',
   providerOrder: ['ollama'],
   claudeApiKey: null,
