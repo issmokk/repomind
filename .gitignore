@@ -46,3 +46,6 @@ wasm/*.wasm
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Evaluation synthetic datasets (regenerated on demand)
+src/lib/rag/__eval__/datasets/synthetic.json
