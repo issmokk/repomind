@@ -114,6 +114,36 @@ describe('POST /api/repos/:id/index', () => {
     expect(res.status).toBe(200)
     expect(data.jobId).toBe('job-1')
   })
+
+  it('returns 409 for PipelineError with 409 status', async () => {
+    const { startIndexingJob } = await import('@/lib/indexer/pipeline')
+    const { PipelineError } = await import('@/lib/indexer/pipeline')
+    vi.mocked(startIndexingJob).mockRejectedValueOnce(new PipelineError('Already indexing', 409))
+
+    const { POST } = await import('./[id]/index/route')
+    const res = await POST(makeRequest('POST', {}), { params: Promise.resolve({ id: 'repo-1' }) })
+    expect(res.status).toBe(409)
+    const data = await res.json()
+    expect(data.error).toBe('Already indexing')
+  })
+
+  it('returns 500 for unexpected errors', async () => {
+    const { startIndexingJob } = await import('@/lib/indexer/pipeline')
+    vi.mocked(startIndexingJob).mockRejectedValueOnce(new Error('Connection failed'))
+
+    const { POST } = await import('./[id]/index/route')
+    const res = await POST(makeRequest('POST', {}), { params: Promise.resolve({ id: 'repo-1' }) })
+    expect(res.status).toBe(500)
+    const data = await res.json()
+    expect(data.error).toBe('Connection failed')
+  })
+
+  it('returns 404 when repo not found', async () => {
+    mockStorage.getRepository.mockResolvedValueOnce(null)
+    const { POST } = await import('./[id]/index/route')
+    const res = await POST(makeRequest('POST', {}), { params: Promise.resolve({ id: 'missing' }) })
+    expect(res.status).toBe(404)
+  })
 })
 
 describe('POST /api/repos/:id/index/process', () => {
@@ -131,6 +161,15 @@ describe('POST /api/repos/:id/index/process', () => {
     const data = await res.json()
     expect(data.status).toBe('completed')
   })
+
+  it('returns status none when no active or latest job', async () => {
+    mockStorage.getActiveJob.mockResolvedValueOnce(null)
+    mockStorage.getLatestJob.mockResolvedValueOnce(null)
+    const { POST } = await import('./[id]/index/process/route')
+    const res = await POST(makeRequest('POST'), { params: Promise.resolve({ id: 'repo-1' }) })
+    const data = await res.json()
+    expect(data.status).toBe('none')
+  })
 })
 
 describe('GET /api/repos/:id/status', () => {
@@ -140,6 +179,27 @@ describe('GET /api/repos/:id/status', () => {
     const data = await res.json()
     expect(data.status).toBe('completed')
   })
+
+  it('returns status none when no jobs exist', async () => {
+    const { checkAndMarkStaleJob } = await import('@/lib/indexer/pipeline')
+    vi.mocked(checkAndMarkStaleJob).mockResolvedValueOnce(null)
+    mockStorage.getLatestJob.mockResolvedValueOnce(null)
+
+    const { GET } = await import('./[id]/status/route')
+    const res = await GET(makeRequest('GET'), { params: Promise.resolve({ id: 'repo-1' }) })
+    const data = await res.json()
+    expect(data.status).toBe('none')
+  })
+
+  it('returns active job when stale check finds one', async () => {
+    const { checkAndMarkStaleJob } = await import('@/lib/indexer/pipeline')
+    vi.mocked(checkAndMarkStaleJob).mockResolvedValueOnce({ id: 'job-1', status: 'processing', processedFiles: 5, totalFiles: 10 } as never)
+
+    const { GET } = await import('./[id]/status/route')
+    const res = await GET(makeRequest('GET'), { params: Promise.resolve({ id: 'repo-1' }) })
+    const data = await res.json()
+    expect(data.status).toBe('processing')
+  })
 })
 
 describe('GET /api/repos/:id/settings', () => {
@@ -148,6 +208,13 @@ describe('GET /api/repos/:id/settings', () => {
     const res = await GET(makeRequest('GET'), { params: Promise.resolve({ id: 'repo-1' }) })
     const data = await res.json()
     expect(data.embeddingProvider).toBe('ollama')
+  })
+
+  it('returns 404 when settings not found', async () => {
+    mockStorage.getSettings.mockResolvedValueOnce(null)
+    const { GET } = await import('./[id]/settings/route')
+    const res = await GET(makeRequest('GET'), { params: Promise.resolve({ id: 'repo-1' }) })
+    expect(res.status).toBe(404)
   })
 })
 
@@ -177,5 +244,36 @@ describe('PUT /api/repos/:id/settings', () => {
       { params: Promise.resolve({ id: 'repo-1' }) },
     )
     expect(res.status).toBe(400)
+  })
+
+  it('validates includePatterns is array of strings', async () => {
+    const { PUT } = await import('./[id]/settings/route')
+    const res = await PUT(
+      makeRequest('PUT', { includePatterns: 'not-array' }),
+      { params: Promise.resolve({ id: 'repo-1' }) },
+    )
+    expect(res.status).toBe(400)
+    const data = await res.json()
+    expect(data.error).toMatch(/includePatterns/)
+  })
+
+  it('validates excludePatterns is array of strings', async () => {
+    const { PUT } = await import('./[id]/settings/route')
+    const res = await PUT(
+      makeRequest('PUT', { excludePatterns: [123] }),
+      { params: Promise.resolve({ id: 'repo-1' }) },
+    )
+    expect(res.status).toBe(400)
+    const data = await res.json()
+    expect(data.error).toMatch(/excludePatterns/)
+  })
+
+  it('strips unknown fields from update', async () => {
+    const { PUT } = await import('./[id]/settings/route')
+    await PUT(
+      makeRequest('PUT', { branchFilter: ['main'], hackerField: 'drop me' }),
+      { params: Promise.resolve({ id: 'repo-1' }) },
+    )
+    expect(mockStorage.updateSettings).toHaveBeenCalledWith('repo-1', { branchFilter: ['main'] })
   })
 })
