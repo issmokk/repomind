@@ -18,7 +18,7 @@ export function MessagePartRenderer({ part, onSourceClick }: Props) {
   if (part.type === 'text') {
     return (
       <div className="prose prose-sm dark:prose-invert max-w-none prose-code:font-mono prose-pre:bg-muted prose-pre:rounded-lg">
-        <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{part.text}</ReactMarkdown>
+        <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{String(part.text ?? '')}</ReactMarkdown>
       </div>
     );
   }

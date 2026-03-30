@@ -13,8 +13,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
-  const ctx = await getRepoContext(id)
-  if (ctx instanceof NextResponse) return ctx
+  const ctxResult = await getRepoContext(id)
+  if (ctxResult instanceof NextResponse) return ctxResult
+  const ctx = ctxResult
 
   const encoder = new TextEncoder()
   let pollTimer: ReturnType<typeof setInterval> | null = null

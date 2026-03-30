@@ -61,6 +61,9 @@ export function ChatMessages({ messages, status, onSourceClick }: Props) {
           <ChatMessageSkeleton />
         </div>
       )}
+      <span className="sr-only" aria-live="assertive">
+        {status === 'streaming' ? 'Assistant is responding...' : status === 'submitted' ? 'Processing your message...' : ''}
+      </span>
     </div>
   );
 }

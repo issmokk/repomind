@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useGitHubRepos } from '@/hooks/use-github-repos';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { createBrowserClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 
 interface GitHubRepoPickerProps {
   onSelect: (fullName: string) => void;
@@ -24,7 +24,7 @@ export function GitHubRepoPicker({ onSelect, loading }: GitHubRepoPickerProps) {
         <p className="text-sm text-muted-foreground">GitHub token expired. Please re-connect.</p>
         <Button
           onClick={() => {
-            const supabase = createBrowserClient();
+            const supabase = createClient();
             supabase.auth.signInWithOAuth({
               provider: 'github',
               options: { redirectTo: `${window.location.origin}/auth/callback` },

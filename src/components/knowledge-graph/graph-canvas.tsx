@@ -66,6 +66,16 @@ export function GraphCanvas({ elements, isLoading, layout, searchQuery, onNodeDo
     dimNonMatching(matching)
   }, [searchQuery, elements, highlightNodes, dimNonMatching])
 
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && selectedNode) {
+        setSelectedNode(null)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [selectedNode])
+
   if (isLoading) {
     return (
       <div className="flex-1 p-4" data-testid="graph-loading">

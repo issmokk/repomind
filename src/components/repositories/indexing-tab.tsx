@@ -154,7 +154,14 @@ export function IndexingTab({ repoId, initialJob }: IndexingTabProps) {
                   {job.processedFiles} / {job.totalFiles} files
                 </span>
               </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-2 w-full overflow-hidden rounded-full bg-muted"
+                role="progressbar"
+                aria-valuenow={percentage}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Indexing progress: ${percentage}%`}
+              >
                 <div
                   className="h-full rounded-full bg-blue-500 transition-all duration-300"
                   style={{ width: `${percentage}%` }}
