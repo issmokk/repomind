@@ -3,7 +3,7 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { OverviewTab } from './overview-tab';
 import { SettingsTab } from './settings-tab';
-import { IndexingTabPlaceholder } from './indexing-tab-placeholder';
+import { IndexingTab } from './indexing-tab';
 import type { Repository, RepositorySettings } from '@/types/repository';
 import type { IndexingJob } from '@/types/indexing';
 import type { KeyedMutator } from 'swr';
@@ -36,7 +36,7 @@ export function RepoDetailTabs({
         <OverviewTab repo={repo} latestJob={latestJob} mutateRepo={mutateRepo} mutateJob={mutateJob} />
       </TabsContent>
       <TabsContent value="indexing">
-        <IndexingTabPlaceholder repoId={repo.id} />
+        <IndexingTab repoId={repo.id} initialJob={latestJob} />
       </TabsContent>
       <TabsContent value="settings">
         <SettingsTab repoId={repo.id} settings={settings} mutateSettings={mutateSettings} />

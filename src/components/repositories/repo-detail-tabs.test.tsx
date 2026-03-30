@@ -11,8 +11,8 @@ vi.mock('./settings-tab', () => ({
   SettingsTab: () => <div data-testid="settings-tab">Settings Content</div>,
 }));
 
-vi.mock('./indexing-tab-placeholder', () => ({
-  IndexingTabPlaceholder: () => <div data-testid="indexing-tab">Indexing Content</div>,
+vi.mock('./indexing-tab', () => ({
+  IndexingTab: () => <div data-testid="indexing-tab">Indexing Content</div>,
 }));
 
 vi.mock('next/navigation', () => ({
