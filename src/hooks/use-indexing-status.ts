@@ -67,6 +67,13 @@ export function useIndexingStatus(repoId: string | null): UseIndexingStatusRetur
       setJob(null);
     });
 
+    es.addEventListener('reconnect', () => {
+      es.close();
+      esRef.current = null;
+      setIsConnected(false);
+      setTimeout(() => connectRef.current(), 500);
+    });
+
     es.addEventListener('error', () => {
       setIsConnected(false);
       if (es.readyState === EventSource.CLOSED && !doneRef.current) {

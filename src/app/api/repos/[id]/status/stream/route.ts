@@ -111,7 +111,10 @@ export async function GET(
       poll()
       pollTimer = setInterval(poll, POLL_INTERVAL)
       heartbeatTimer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL)
-      maxDurationTimer = setTimeout(cleanup, MAX_DURATION)
+      maxDurationTimer = setTimeout(() => {
+        sendEvent('reconnect', {})
+        cleanup()
+      }, MAX_DURATION)
 
       request.signal.addEventListener('abort', cleanup)
     },
