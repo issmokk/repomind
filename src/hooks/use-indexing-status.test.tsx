@@ -14,7 +14,6 @@ class MockEventSource {
   constructor(url: string) {
     this.url = url;
     MockEventSource.instances.push(this);
-    setTimeout(() => this.emit('open'), 0);
   }
 
   addEventListener(event: string, handler: EventHandler) {
@@ -86,15 +85,15 @@ describe('useIndexingStatus', () => {
   it('sets isConnected to true on open', async () => {
     const { result } = renderHook(() => useIndexingStatus('repo-1'));
 
-    await act(async () => {
-      await vi.waitFor(() => {
-        expect(MockEventSource.instances.length).toBeGreaterThan(0);
-      });
+    await vi.waitFor(() => {
+      expect(MockEventSource.instances.length).toBeGreaterThan(0);
     });
 
-    await vi.waitFor(() => {
-      expect(result.current.isConnected).toBe(true);
+    act(() => {
+      MockEventSource.instances[0].emit('open');
     });
+
+    expect(result.current.isConnected).toBe(true);
   });
 
   it('sets isConnected to false on error', async () => {
