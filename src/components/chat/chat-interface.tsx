@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
+import type { UIMessage } from 'ai';
 import { ChatMessages } from './chat-messages';
 import { ChatInput } from './chat-input';
 import { SourcePanel } from './source-panel';
@@ -18,9 +19,10 @@ const transport = new DefaultChatTransport({ api: '/api/chat' });
 interface Props {
   conversationId: string;
   repos: Repo[];
+  initialMessages?: UIMessage[];
 }
 
-export function ChatInterface({ conversationId, repos }: Props) {
+export function ChatInterface({ conversationId, repos, initialMessages }: Props) {
   const [selectedRepoIds, setSelectedRepoIds] = useState<string[]>(
     repos.map((r) => r.id),
   );
@@ -31,6 +33,7 @@ export function ChatInterface({ conversationId, repos }: Props) {
   const { messages, sendMessage, status, stop, error } = useChat({
     id: conversationId,
     transport,
+    messages: initialMessages,
   });
 
   const { groups, isLoading: historyLoading, hasMore, loadMore, mutate: mutateHistory } = useChatHistory(searchQuery);
