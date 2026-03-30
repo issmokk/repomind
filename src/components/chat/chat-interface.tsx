@@ -33,15 +33,16 @@ export function ChatInterface({ conversationId, repos }: Props) {
     transport,
   });
 
-  const { groups, isLoading: historyLoading, hasMore, loadMore } = useChatHistory(searchQuery);
+  const { groups, isLoading: historyLoading, hasMore, loadMore, mutate: mutateHistory } = useChatHistory(searchQuery);
 
   const isLoading = status === 'streaming' || status === 'submitted';
   const isStreaming = status === 'streaming';
 
   function handleSend() {
     if (inputValue.trim() && !isLoading) {
-      sendMessage({ text: inputValue }, { body: { repoIds: selectedRepoIds } });
+      sendMessage({ text: inputValue }, { body: { repoIds: selectedRepoIds, sessionId: conversationId } });
       setInputValue('');
+      setTimeout(() => mutateHistory(), 3000);
     }
   }
 

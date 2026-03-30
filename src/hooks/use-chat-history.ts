@@ -2,17 +2,14 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
+import { fetcher } from '@/lib/fetcher';
 import type { ConversationGroup } from '@/components/chat/conversation-history';
 
 interface ChatHistoryMessage {
   id: string;
   question: string;
+  sessionId: string | null;
   createdAt: string;
-}
-
-interface HistoryResponse {
-  messages: ChatHistoryMessage[];
-  total: number;
 }
 
 function groupByDate(messages: ChatHistoryMessage[]): ConversationGroup[] {
@@ -44,23 +41,25 @@ function groupByDate(messages: ChatHistoryMessage[]): ConversationGroup[] {
     .map(([label, conversations]) => ({ label, conversations }));
 }
 
-const LIMIT = 20;
+const LIMIT = 50;
 
 export function useChatHistory(searchQuery?: string) {
-  const [page, setPage] = useState(1);
+  const [offset, setOffset] = useState(0);
 
-  const key = `/api/chat/history?page=${page}&limit=${LIMIT}&q=${encodeURIComponent(searchQuery ?? '')}`;
+  const key = `/api/chat/history?offset=${offset}&limit=${LIMIT}&q=${encodeURIComponent(searchQuery ?? '')}`;
 
-  const { data, error, isLoading } = useSWR<HistoryResponse>(key);
+  const { data, error, isLoading, mutate } = useSWR<ChatHistoryMessage[]>(key, fetcher, {
+    revalidateOnFocus: true,
+  });
 
-  const messages = useMemo(() => data?.messages ?? [], [data?.messages]);
+  const messages = useMemo(() => data ?? [], [data]);
   const hasMore = messages.length === LIMIT;
 
   const groups = useMemo(() => groupByDate(messages), [messages]);
 
   const loadMore = useCallback(() => {
-    setPage((p) => p + 1);
+    setOffset((o) => o + LIMIT);
   }, []);
 
-  return { groups, isLoading, error, loadMore, hasMore };
+  return { groups, isLoading, error, loadMore, hasMore, mutate };
 }
