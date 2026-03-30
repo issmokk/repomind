@@ -11,6 +11,7 @@ export interface ConversationGroup {
   label: string;
   conversations: Array<{
     id: string;
+    sessionId?: string | null;
     question: string;
     createdAt: string;
   }>;
@@ -86,7 +87,8 @@ export function ConversationHistory({
                   {group.label}
                 </p>
                 {group.conversations.map((conv) => {
-                  const isActive = pathname === `/chat/${conv.id}`;
+                  const convId = conv.sessionId ?? conv.id;
+                  const isActive = pathname === `/chat/${convId}`;
                   return (
                     <div
                       key={conv.id}
@@ -95,7 +97,7 @@ export function ConversationHistory({
                       className="relative"
                     >
                       <Link
-                        href={`/chat/${conv.id}`}
+                        href={`/chat/${convId}`}
                         className={`block rounded-md px-2 py-1.5 text-xs transition-colors ${
                           isActive
                             ? 'bg-accent text-accent-foreground'
