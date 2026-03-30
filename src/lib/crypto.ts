@@ -21,6 +21,15 @@ export function encrypt(plaintext: string): string {
   return [iv.toString('base64'), authTag.toString('base64'), encrypted.toString('base64')].join(':');
 }
 
+export function maskApiKey(decryptedKey: string): string {
+  if (decryptedKey.length <= 4) return '****'
+  return '****' + decryptedKey.slice(-4)
+}
+
+export function isMaskedValue(value: string): boolean {
+  return /^\*{4}.{0,4}$/.test(value)
+}
+
 export function decrypt(ciphertext: string): string {
   const key = getKey();
   const parts = ciphertext.split(':');
