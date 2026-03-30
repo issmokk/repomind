@@ -36,18 +36,14 @@ export default async function ConversationPage({
       msgs.push({
         id: `${msg.id}-q`,
         role: 'user',
-        content: msg.question,
         parts: [{ type: 'text', text: msg.question }],
-        createdAt: new Date(msg.createdAt),
       });
     }
     if (msg.answer) {
       msgs.push({
         id: `${msg.id}-a`,
         role: 'assistant',
-        content: msg.answer,
         parts: [{ type: 'text', text: msg.answer }],
-        createdAt: new Date(msg.createdAt),
       });
     }
     return msgs;
