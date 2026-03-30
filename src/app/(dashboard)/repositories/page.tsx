@@ -1,17 +1,31 @@
-import { FolderGit2 } from 'lucide-react';
+'use client';
+
+import { toast } from 'sonner';
+import { useRepos } from '@/hooks/use-repos';
+import { RepoList } from '@/components/repositories/repo-list';
 
 export default function RepositoriesPage() {
+  const { repos, isLoading, addRepo, deleteRepo } = useRepos();
+
+  async function handleReindex(id: string) {
+    try {
+      const res = await fetch(`/api/repos/${id}/index`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to trigger indexing');
+      toast.success('Indexing started');
+    } catch {
+      toast.error('Failed to start indexing');
+    }
+  }
+
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-        <FolderGit2 className="h-8 w-8 text-primary" />
-      </div>
-      <div>
-        <h1 className="text-xl font-semibold">Repositories</h1>
-        <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-          Connect and manage your GitHub repositories for indexing.
-        </p>
-      </div>
+    <div className="p-4 md:p-6">
+      <RepoList
+        repos={repos}
+        isLoading={isLoading}
+        onAdd={addRepo}
+        onReindex={handleReindex}
+        onDelete={(id) => deleteRepo(id)}
+      />
     </div>
   );
 }
