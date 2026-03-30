@@ -93,9 +93,11 @@ export function ChatInterface({ conversationId, repos }: Props) {
         </div>
       </div>
 
-      <div className="hidden lg:block w-[400px] border-l">
-        <SourcePanel sources={selectedSources} />
-      </div>
+      {selectedSources && selectedSources.length > 0 && (
+        <div className="hidden lg:block w-[400px] border-l">
+          <SourcePanel sources={selectedSources} />
+        </div>
+      )}
     </div>
   );
 }
