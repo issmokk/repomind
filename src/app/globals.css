@@ -46,6 +46,13 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border-subtle: var(--border-subtle);
+  --color-status-success: var(--status-success);
+  --color-status-warning: var(--status-warning);
+  --color-status-error: var(--status-error);
+  --color-status-info: var(--status-info);
 }
 
 :root {
@@ -81,6 +88,13 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --surface: oklch(0.98 0 0);
+  --surface-hover: oklch(0.96 0 0);
+  --border-subtle: oklch(0.9 0 0);
+  --status-success: oklch(0.55 0.17 150);
+  --status-warning: oklch(0.65 0.15 85);
+  --status-error: oklch(0.55 0.2 25);
+  --status-info: oklch(0.55 0.2 260);
 }
 
 .dark {
@@ -115,6 +129,13 @@
   --sidebar-accent-foreground: oklch(0.95 0 0);
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.65 0.2 260);
+  --surface: oklch(0.16 0.01 260);
+  --surface-hover: oklch(0.2 0.01 260);
+  --border-subtle: oklch(1 0 0 / 6%);
+  --status-success: oklch(0.7 0.17 150);
+  --status-warning: oklch(0.75 0.15 85);
+  --status-error: oklch(0.65 0.2 25);
+  --status-info: oklch(0.65 0.2 260);
 }
 
 @layer base {
