@@ -13,7 +13,7 @@ interface RepoDetailTabsProps {
   settings: RepositorySettings | undefined;
   latestJob: IndexingJob | null;
   mutateRepo: KeyedMutator<Repository>;
-  mutateSettings: KeyedMutator<RepositorySettings>;
+  mutateSettings: KeyedMutator<RepositorySettings | null>;
   mutateJob: KeyedMutator<IndexingJob | { status: 'none' }>;
 }
 

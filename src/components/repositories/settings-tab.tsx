@@ -19,7 +19,7 @@ const INDEXING_METHODS = [
 interface SettingsTabProps {
   repoId: string;
   settings: RepositorySettings;
-  mutateSettings: KeyedMutator<RepositorySettings>;
+  mutateSettings: KeyedMutator<RepositorySettings | null>;
 }
 
 export function SettingsTab({ repoId, settings, mutateSettings }: SettingsTabProps) {

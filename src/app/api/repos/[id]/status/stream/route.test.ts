@@ -31,6 +31,7 @@ const mockStorage = {
   getRepository: vi.fn(() =>
     Promise.resolve({ id: 'repo-1', orgId: 'org-1', name: 'test', fullName: 'test/test' }),
   ),
+  getSettings: vi.fn(() => Promise.resolve(null)),
 };
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -52,6 +53,7 @@ vi.mock('@/lib/storage/supabase', () => ({
     getActiveJob = mockStorage.getActiveJob;
     getLatestJob = mockStorage.getLatestJob;
     getRepository = mockStorage.getRepository;
+    getSettings = mockStorage.getSettings;
   },
 }));
 
@@ -62,6 +64,17 @@ vi.mock('@/lib/indexer/pipeline', () => ({
     if (callCount === 2) return { ...mockJob, processedFiles: 20 };
     return null;
   }),
+  processNextBatch: vi.fn(async () => ({ job: mockJob, hasMore: true })),
+}));
+
+vi.mock('@/lib/github', () => ({
+  PersonalAccessTokenAuth: class {},
+  GitHubClient: class {},
+  GitHubFileCache: class {},
+}));
+
+vi.mock('@/lib/indexer/embedding', () => ({
+  createEmbeddingProvider: vi.fn(() => ({})),
 }));
 
 function createRequest(_repoId: string): NextRequest {
