@@ -56,32 +56,41 @@ export function ChatInterface({ conversationId, repos }: Props) {
         onLoadMore={loadMore}
       />
 
-      <div className="flex flex-col flex-1 min-w-0">
+      <div className={`flex flex-col flex-1 min-w-0 ${messages.length === 0 ? 'justify-center' : ''}`}>
         {error && (
           <div className="p-4 text-sm text-destructive border-b bg-destructive/5">
             {error.message}
           </div>
         )}
-        <ChatMessages
-          messages={messages}
-          status={status}
-          onSourceClick={() => setSelectedSources(null)}
-        />
-        <div className="px-4 pb-2">
+        {messages.length > 0 && (
+          <ChatMessages
+            messages={messages}
+            status={status}
+            onSourceClick={() => setSelectedSources(null)}
+          />
+        )}
+        <div className={`${messages.length === 0 ? 'max-w-2xl mx-auto w-full px-4' : 'px-4'} pb-2`}>
+          {messages.length === 0 && (
+            <h2 className="text-lg font-medium text-center mb-6 text-muted-foreground">
+              Ask a question about your codebase
+            </h2>
+          )}
           <RepoSelector
             repos={repos}
             selectedIds={selectedRepoIds}
             onSelectionChange={setSelectedRepoIds}
           />
         </div>
-        <ChatInput
-          input={inputValue}
-          onInputChange={setInputValue}
-          onSubmit={handleSend}
-          onStop={stop}
-          isLoading={isLoading}
-          isStreaming={isStreaming}
-        />
+        <div className={messages.length === 0 ? 'max-w-2xl mx-auto w-full' : ''}>
+          <ChatInput
+            input={inputValue}
+            onInputChange={setInputValue}
+            onSubmit={handleSend}
+            onStop={stop}
+            isLoading={isLoading}
+            isStreaming={isStreaming}
+          />
+        </div>
       </div>
 
       <div className="hidden lg:block w-[400px] border-l">
