@@ -58,7 +58,24 @@ GitHub OAuth is configured in Supabase Dashboard (Authentication > Providers > G
 | `POST` | `/api/chat` | Stream a RAG query (SSE) |
 | `GET` | `/api/chat/history` | Paginated message history |
 | `POST` | `/api/chat/feedback` | Thumbs up/down on answers |
-| `GET/PUT` | `/api/settings/team` | Team LLM/search configuration |
+| `GET` | `/api/repos/:id` | Get repository details |
+| `GET` | `/api/repos/:id/status/stream` | SSE stream for real-time indexing progress |
+| `GET` | `/api/github/repos` | List GitHub repos via PAT proxy |
+| `GET/PUT` | `/api/settings/team` | Team LLM/search configuration (keys encrypted) |
+| `POST` | `/api/settings/test-connection` | Test LLM provider connectivity |
+| `GET` | `/api/graph` | Knowledge graph edges with filters |
+
+## Pages
+
+| Route | Description |
+|-------|-------------|
+| `/login` | GitHub OAuth login via Supabase |
+| `/chat` | AI chat with repo context, conversation routing |
+| `/chat/[id]` | Specific conversation with streaming responses |
+| `/repositories` | Repository list (grid/list toggle), add repos |
+| `/repositories/[id]` | Repo detail: overview, indexing (SSE), settings tabs |
+| `/knowledge-graph` | Cytoscape.js code relationship visualization with filters |
+| `/settings` | LLM provider chain, API key management, search config |
 
 ## Architecture
 
@@ -91,7 +108,7 @@ Querying:  User Question -> Query Analyzer -> Hybrid Search (pgvector + FTS + RR
 |---------|-------------|
 | `npm run dev` | Start dev server |
 | `npm run build` | Production build |
-| `npm run test:run` | Run tests (314 tests) |
+| `npm run test:run` | Run tests (495 tests) |
 | `npm run eval` | Run RAG evaluation harness |
 | `npm run setup` | Download tree-sitter grammars |
 | `npm run lint` | ESLint |
@@ -104,12 +121,21 @@ src/
   app/
     (auth)/              # Login, OAuth callback
     (dashboard)/         # Authenticated pages (chat, repos, settings)
-    api/repos/           # Repository + indexing API routes
+    api/repos/           # Repository + indexing API routes (CRUD, SSE status stream)
     api/chat/            # RAG chat API (streaming, history, feedback)
-    api/settings/team/   # Team settings API
+    api/settings/        # Team settings (encrypted API keys) + test-connection
+    api/graph/           # Knowledge graph API (filtered edge queries)
+    api/github/          # GitHub proxy (PAT-authenticated repo listing)
   components/
-    chat/                # Chat UI components (messages, input, source panel)
-    ui/                  # shadcn/ui base components
+    chat/                # Chat UI (messages, input, history, repo selector, sources)
+    knowledge-graph/     # Cytoscape.js graph canvas, controls panel, legend
+    layout/              # App sidebar, topbar, breadcrumbs
+    repositories/        # Repo cards, add dialog, detail tabs, indexing tab
+    settings/            # Provider chain (dnd-kit), provider config, search config, repo table
+    shared/              # Skeletons, error boundary, empty state, status badge, confirmation dialog
+    ui/                  # shadcn/ui v4 base components (Base UI)
+  hooks/                 # SWR data hooks (repos, graph, indexing, chat history, breadcrumbs)
+  providers/             # SWR provider
   lib/
     storage/             # StorageProvider + Supabase implementation
     github/              # Auth, API client, file cache

@@ -22,9 +22,24 @@ export async function GET(req: Request) {
       auth.userId,
       auth.orgId,
       auth.supabase,
-      { limit, offset }
+      { limit: limit * 3, offset }
     )
-    return NextResponse.json(messages)
+
+    const seen = new Map<string, { id: string; sessionId: string | null; question: string; createdAt: string }>()
+    for (const msg of messages) {
+      const key = msg.sessionId ?? msg.id
+      if (!seen.has(key)) {
+        seen.set(key, {
+          id: msg.id,
+          sessionId: msg.sessionId,
+          question: msg.question,
+          createdAt: msg.createdAt,
+        })
+      }
+    }
+
+    const conversations = Array.from(seen.values()).slice(0, limit)
+    return NextResponse.json(conversations)
   } catch (err) {
     console.error('History fetch error:', err)
     return NextResponse.json(

@@ -1,9 +1,28 @@
 import { NextResponse } from 'next/server'
 import { getAuthContext } from '@/app/api/repos/_helpers'
+import { encrypt, decrypt, maskApiKey, isMaskedValue } from '@/lib/crypto'
 
 export const runtime = 'nodejs'
 
-const VALID_PROVIDERS = new Set(['ollama', 'claude', 'openai'])
+const VALID_PROVIDERS = new Set(['ollama', 'claude', 'openai', 'cohere'])
+
+const API_KEY_FIELDS = ['claudeApiKey', 'openaiApiKey', 'cohereApiKey'] as const
+
+function maskSettings(settings: Record<string, unknown>): Record<string, unknown> {
+  const masked = { ...settings }
+  for (const field of API_KEY_FIELDS) {
+    const value = masked[field]
+    if (typeof value === 'string' && value.length > 0) {
+      try {
+        const decrypted = decrypt(value)
+        masked[field] = maskApiKey(decrypted)
+      } catch {
+        masked[field] = null
+      }
+    }
+  }
+  return masked
+}
 
 export async function GET() {
   const auth = await getAuthContext()
@@ -11,7 +30,7 @@ export async function GET() {
 
   try {
     const settings = await auth.storage.getTeamSettings(auth.orgId)
-    return NextResponse.json(settings)
+    return NextResponse.json(maskSettings(settings as unknown as Record<string, unknown>))
   } catch (err) {
     console.error('Failed to fetch team settings:', err)
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 })
@@ -76,9 +95,20 @@ export async function PUT(req: Request) {
     if (ALLOWED_FIELDS.has(key)) filtered[key] = value
   }
 
+  for (const field of API_KEY_FIELDS) {
+    const value = filtered[field]
+    if (typeof value === 'string') {
+      if (isMaskedValue(value)) {
+        delete filtered[field]
+      } else {
+        filtered[field] = encrypt(value)
+      }
+    }
+  }
+
   try {
     const settings = await auth.storage.updateTeamSettings(auth.orgId, filtered)
-    return NextResponse.json(settings)
+    return NextResponse.json(maskSettings(settings as unknown as Record<string, unknown>))
   } catch (err) {
     console.error('Failed to update team settings:', err)
     return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 })

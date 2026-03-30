@@ -4,6 +4,30 @@ import { startIndexingJob, PipelineError } from '@/lib/indexer/pipeline'
 import { GitHubClient, PersonalAccessTokenAuth, GitHubFileCache } from '@/lib/github'
 import { createEmbeddingProvider } from '@/lib/indexer/embedding'
 
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params
+  const ctx = await getRepoContext(id)
+  if (ctx instanceof NextResponse) return ctx
+
+  const activeJob = await ctx.storage.getActiveJob(id)
+  if (!activeJob) {
+    return NextResponse.json({ error: 'No active indexing job' }, { status: 404 })
+  }
+
+  await ctx.storage.updateJobStatus(activeJob.id, 'failed', {
+    errorLog: [
+      ...activeJob.errorLog,
+      { error: 'Cancelled by user', timestamp: new Date().toISOString() },
+    ],
+    completedAt: new Date().toISOString(),
+  })
+
+  return NextResponse.json({ success: true })
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },

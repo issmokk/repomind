@@ -495,6 +495,20 @@ export class SupabaseStorageProvider implements StorageProvider {
     return (rows ?? []).map((r: Record<string, unknown>) => toCamelCase<ChatMessage>(r))
   }
 
+  async getMessagesBySession(
+    sessionId: string,
+    userClient: SupabaseClient,
+  ): Promise<ChatMessage[]> {
+    const result = await userClient
+      .from('chat_messages')
+      .select('*')
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true })
+
+    const rows = assertNoError(result, 'getMessagesBySession')
+    return (rows ?? []).map((r: Record<string, unknown>) => toCamelCase<ChatMessage>(r))
+  }
+
   async saveFeedback(data: NewQueryFeedback): Promise<void> {
     const result = await this.serviceClient
       .from('query_feedback')

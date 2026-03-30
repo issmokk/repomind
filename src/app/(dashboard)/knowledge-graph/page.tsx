@@ -1,17 +1,44 @@
-import { Network } from 'lucide-react';
+'use client'
+
+import { useState, useCallback } from 'react'
+import { ControlsPanel } from '@/components/knowledge-graph/controls-panel'
+import { GraphCanvas } from '@/components/knowledge-graph/graph-canvas'
+import { useGraphData, type GraphFilters } from '@/hooks/use-graph-data'
+import { useRepos } from '@/hooks/use-repos'
 
 export default function KnowledgeGraphPage() {
+  const [layout, setLayout] = useState('cose')
+  const [filters, setFilters] = useState<GraphFilters>({})
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const { repos } = useRepos()
+  const { elements, isLoading, expandNode } = useGraphData(filters)
+
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query)
+  }, [])
+
+  const handleNodeDoubleClick = useCallback((nodeId: string) => {
+    expandNode(nodeId)
+  }, [expandNode])
+
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-        <Network className="h-8 w-8 text-primary" />
-      </div>
-      <div>
-        <h1 className="text-xl font-semibold">Knowledge Graph</h1>
-        <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-          Visualize code relationships and dependencies across your repositories.
-        </p>
-      </div>
+    <div className="flex h-full">
+      <ControlsPanel
+        repos={repos.map((r) => ({ id: r.id, fullName: r.fullName }))}
+        layout={layout}
+        onLayoutChange={setLayout}
+        filters={filters}
+        onFilterChange={setFilters}
+        onSearch={handleSearch}
+      />
+      <GraphCanvas
+        elements={elements}
+        isLoading={isLoading}
+        layout={layout}
+        searchQuery={searchQuery}
+        onNodeDoubleClick={handleNodeDoubleClick}
+      />
     </div>
-  );
+  )
 }

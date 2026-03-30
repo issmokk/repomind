@@ -60,6 +60,7 @@ export async function POST(req: Request) {
   }
 
   const repoIds = body.repoIds as string[] | undefined
+  const sessionId = (body.sessionId as string) ?? null
   const filters = body.filters as Record<string, string> | undefined
 
   let question: string | undefined
@@ -156,7 +157,7 @@ export async function POST(req: Request) {
             await auth.storage.saveMessage({
               orgId: auth.orgId,
               userId: auth.userId,
-              sessionId: null,
+              sessionId,
               repoIds,
               question,
               answer: text,

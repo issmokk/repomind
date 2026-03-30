@@ -116,6 +116,7 @@ describe('POST /api/repos/:id/index', () => {
   })
 
   it('returns 409 for PipelineError with 409 status', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
     const { startIndexingJob } = await import('@/lib/indexer/pipeline')
     const { PipelineError } = await import('@/lib/indexer/pipeline')
     vi.mocked(startIndexingJob).mockRejectedValueOnce(new PipelineError('Already indexing', 409))
@@ -128,6 +129,7 @@ describe('POST /api/repos/:id/index', () => {
   })
 
   it('returns 500 for unexpected errors', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
     const { startIndexingJob } = await import('@/lib/indexer/pipeline')
     vi.mocked(startIndexingJob).mockRejectedValueOnce(new Error('Connection failed'))
 
