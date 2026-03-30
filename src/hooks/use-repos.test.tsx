@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { useRepos } from './use-repos';
 import { SWRConfig } from 'swr';
 import type { ReactNode } from 'react';
@@ -58,7 +58,7 @@ describe('useRepos', () => {
     fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(newRepo), { status: 200 }));
     fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify([...mockRepos, newRepo]), { status: 200 }));
 
-    await result.current.addRepo('owner/repo3');
+    await act(() => result.current.addRepo('owner/repo3'));
 
     const postCall = fetchSpy.mock.calls.find(
       (call) => call[1] && (call[1] as RequestInit).method === 'POST',
@@ -76,7 +76,7 @@ describe('useRepos', () => {
 
     fetchSpy.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
-    await result.current.deleteRepo('1');
+    await act(() => result.current.deleteRepo('1'));
 
     const deleteCall = fetchSpy.mock.calls.find(
       (call) => call[1] && (call[1] as RequestInit).method === 'DELETE',

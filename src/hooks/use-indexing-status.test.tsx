@@ -86,6 +86,12 @@ describe('useIndexingStatus', () => {
   it('sets isConnected to true on open', async () => {
     const { result } = renderHook(() => useIndexingStatus('repo-1'));
 
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(MockEventSource.instances.length).toBeGreaterThan(0);
+      });
+    });
+
     await vi.waitFor(() => {
       expect(result.current.isConnected).toBe(true);
     });
