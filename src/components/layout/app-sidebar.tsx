@@ -2,15 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  MessageSquare,
-  FolderGit2,
-  Network,
-  Activity,
-  Settings,
-  LogOut,
-  Brain,
-} from 'lucide-react';
+import { MessageSquare, FolderGit2, Network, Settings, LogOut, Brain } from 'lucide-react';
 import {
   Sidebar,
   SidebarHeader,
@@ -21,16 +13,21 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { signOut } from '@/lib/auth/helpers';
 
 const navItems = [
   { label: 'Chat', href: '/chat', icon: MessageSquare },
   { label: 'Repositories', href: '/repositories', icon: FolderGit2 },
   { label: 'Knowledge Graph', href: '/knowledge-graph', icon: Network },
-  { label: 'Indexing Status', href: '/indexing', icon: Activity },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
+
+function isActive(pathname: string, href: string): boolean {
+  if (href === '/chat') {
+    return pathname === '/chat' || pathname.startsWith('/chat/');
+  }
+  return pathname.startsWith(href);
+}
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -54,7 +51,7 @@ export function AppSidebar() {
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
-                isActive={pathname === item.href}
+                isActive={isActive(pathname, item.href)}
                 render={<Link href={item.href} />}
               >
                 <item.icon className="h-4 w-4" />
@@ -66,16 +63,13 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarSeparator />
       <SidebarFooter className="p-3">
-        <div className="flex items-center justify-between">
-          <ThemeToggle />
-          <button
-            onClick={signOut}
-            className="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Log out
-          </button>
-        </div>
+        <button
+          onClick={signOut}
+          className="inline-flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          Log out
+        </button>
       </SidebarFooter>
     </Sidebar>
   );
