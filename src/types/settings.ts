@@ -7,6 +7,7 @@ export type TeamSettings = {
   embeddingProvider: EmbeddingProvider
   ollamaBaseUrl: string
   ollamaModel: string
+  ollamaLlmModel: string
   openaiModel: string
   providerOrder: string[]
   claudeApiKey: string | null

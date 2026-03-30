@@ -44,7 +44,7 @@ export async function getLanguageModel(
         if (healthy) {
           const { createOllama } = await import('ollama-ai-provider-v2')
           const ollama = createOllama({ baseURL: `${baseUrl}/api` })
-          return ollama('qwen2.5-coder:7b') as LanguageModel
+          return ollama(teamSettings.ollamaLlmModel || 'qwen2.5-coder:32b') as LanguageModel
         }
         break
       }
