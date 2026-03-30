@@ -29,6 +29,7 @@ const DEFAULT_TEAM_SETTINGS: Omit<TeamSettings, 'id' | 'orgId' | 'teamId' | 'cre
   embeddingProvider: 'ollama' as const,
   ollamaBaseUrl: 'http://localhost:11434',
   ollamaModel: 'rjmalagon/gte-qwen2-1.5b-instruct-embed-f16',
+  ollamaLlmModel: 'qwen2.5-coder:32b',
   openaiModel: 'text-embedding-3-small',
   providerOrder: ['ollama'],
   claudeApiKey: null,
