@@ -539,3 +539,46 @@ erDiagram
         text comment
     }
 ```
+
+## Web Application Architecture (Split 03)
+
+### Component Hierarchy
+
+```
+App Shell (SidebarProvider + SidebarInset)
+  AppSidebar (collapsible, nav items, user menu)
+  TopBar (sidebar toggle, breadcrumbs, theme toggle)
+  Main Content
+    Chat Page
+      ConversationHistory (date-grouped, search, pagination)
+      ChatInterface (useChat, streaming, repo selector)
+      SourcePanel (collapsible references)
+    Repositories Page
+      RepoList (grid/list toggle, add dialog)
+      RepoCard (status badge, reindex/delete)
+    Repo Detail Page
+      RepoDetailTabs
+        OverviewTab (stats, repo info, actions)
+        IndexingTab (SSE progress, cancel, error log)
+        SettingsTab (branch filter, patterns)
+    Knowledge Graph Page
+      ControlsPanel (layout, filters, search, legend)
+      GraphCanvas (Cytoscape.js, node detail popover)
+    Settings Page
+      ProviderChain (dnd-kit sortable fallback chain)
+      ProviderConfig (per-provider forms, test connection)
+      SearchConfig (sliders for graph hops, top-K, RRF K)
+      RepoSettingsTable (inline edit)
+```
+
+### Key Technical Decisions
+
+- **shadcn/ui v4** with `@base-ui/react` (not Radix). `render` prop instead of `asChild`.
+- **SWR** for all client data fetching with optimistic updates.
+- **Cytoscape.js** dynamically imported (no SSR) with dagre layout extension.
+- **@dnd-kit** for drag-to-reorder provider chain.
+- **AES-256-GCM** encryption for API keys at the API boundary (encrypt on PUT, mask on GET).
+- **SSE streaming** for both chat responses (AI SDK) and indexing progress (custom EventSource).
+- **SSE stream drives indexing**: The `/status/stream` endpoint both reports status AND calls `processNextBatch` to advance the pipeline.
+- **ARIA live regions** on chat streaming and indexing progress bar.
+- All API routes use `getAuthContext()` for RLS-enforced Supabase queries.
