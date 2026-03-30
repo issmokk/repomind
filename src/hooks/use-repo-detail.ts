@@ -1,9 +1,18 @@
 'use client';
 
 import useSWR from 'swr';
-import { fetcher } from '@/lib/fetcher';
+import { fetcher, FetchError } from '@/lib/fetcher';
 import type { Repository, RepositorySettings } from '@/types/repository';
 import type { IndexingJob } from '@/types/indexing';
+
+async function settingsFetcher(url: string): Promise<RepositorySettings | null> {
+  try {
+    return await fetcher<RepositorySettings>(url);
+  } catch (err) {
+    if (err instanceof FetchError && err.status === 404) return null;
+    throw err;
+  }
+}
 
 type JobResponse = IndexingJob | { status: 'none' };
 
@@ -16,11 +25,13 @@ export function useRepoDetail(id: string) {
   } = useSWR<Repository>(`/api/repos/${id}`, fetcher);
 
   const {
-    data: settings,
+    data: settingsData,
     error: settingsError,
     isLoading: settingsLoading,
     mutate: mutateSettings,
-  } = useSWR<RepositorySettings>(`/api/repos/${id}/settings`, fetcher);
+  } = useSWR<RepositorySettings | null>(`/api/repos/${id}/settings`, settingsFetcher);
+
+  const settings = settingsData ?? undefined;
 
   const {
     data: jobData,

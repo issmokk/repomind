@@ -10,7 +10,7 @@ import type { KeyedMutator } from 'swr';
 
 interface RepoDetailTabsProps {
   repo: Repository;
-  settings: RepositorySettings;
+  settings: RepositorySettings | undefined;
   latestJob: IndexingJob | null;
   mutateRepo: KeyedMutator<Repository>;
   mutateSettings: KeyedMutator<RepositorySettings>;
@@ -39,7 +39,11 @@ export function RepoDetailTabs({
         <IndexingTab repoId={repo.id} initialJob={latestJob} />
       </TabsContent>
       <TabsContent value="settings">
-        <SettingsTab repoId={repo.id} settings={settings} mutateSettings={mutateSettings} />
+        {settings ? (
+          <SettingsTab repoId={repo.id} settings={settings} mutateSettings={mutateSettings} />
+        ) : (
+          <p className="py-4 text-sm text-muted-foreground">No settings configured yet. Settings will be created when indexing starts.</p>
+        )}
       </TabsContent>
     </Tabs>
   );

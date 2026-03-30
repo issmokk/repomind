@@ -32,7 +32,7 @@ function RepoDetailContent({ id }: { id: string }) {
     return <RepoDetailSkeleton />;
   }
 
-  if (error || !repo || !settings) {
+  if (error || !repo) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
         <p className="text-sm text-muted-foreground">
