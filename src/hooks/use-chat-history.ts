@@ -53,7 +53,7 @@ export function useChatHistory(searchQuery?: string) {
 
   const { data, error, isLoading } = useSWR<HistoryResponse>(key);
 
-  const messages = data?.messages ?? [];
+  const messages = useMemo(() => data?.messages ?? [], [data?.messages]);
   const hasMore = messages.length === LIMIT;
 
   const groups = useMemo(() => groupByDate(messages), [messages]);

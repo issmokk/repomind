@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { LayoutGrid, List, FolderGit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -21,15 +21,14 @@ interface RepoListProps {
   onDelete: (id: string) => void;
 }
 
-export function RepoList({ repos, isLoading, onAdd, onReindex, onDelete }: RepoListProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+function getInitialViewMode(): ViewMode {
+  if (typeof window === 'undefined') return 'grid';
+  const stored = localStorage.getItem(STORAGE_KEY);
+  return stored === 'grid' || stored === 'list' ? stored : 'grid';
+}
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'grid' || stored === 'list') {
-      setViewMode(stored);
-    }
-  }, []);
+export function RepoList({ repos, isLoading, onAdd, onReindex, onDelete }: RepoListProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>(getInitialViewMode);
 
   function toggleView(mode: ViewMode) {
     setViewMode(mode);
