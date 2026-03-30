@@ -56,7 +56,7 @@ export function ChatInterface({ conversationId, repos }: Props) {
         onLoadMore={loadMore}
       />
 
-      <div className={`flex flex-col flex-1 min-w-0 ${messages.length === 0 ? 'justify-center' : ''}`}>
+      <div className={`flex flex-col flex-1 min-w-0 ${messages.length === 0 ? 'justify-center' : 'pb-4'}`}>
         {error && (
           <div className="p-4 text-sm text-destructive border-b bg-destructive/5">
             {error.message}
