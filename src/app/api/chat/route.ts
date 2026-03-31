@@ -41,10 +41,9 @@ function mapErrorToResponse(err: unknown): NextResponse {
     )
   }
 
-  const debugMsg = err instanceof Error ? err.stack ?? err.message : String(err)
-  console.error('Chat API error:', debugMsg)
+  console.error('Chat API error:', err)
   return NextResponse.json(
-    { error: 'An error occurred while processing your question.', debug: debugMsg },
+    { error: 'An error occurred while processing your question.' },
     { status: 500 }
   )
 }
