@@ -26,6 +26,10 @@ const PROVIDER_FIELDS: Record<string, Array<{ key: string; label: string; type: 
     { key: 'openaiApiKey', label: 'API Key', type: 'password', placeholder: 'sk-...' },
     { key: 'openaiLlmModel', label: 'LLM Model', type: 'text', placeholder: 'gpt-4o' },
   ],
+  gemini: [
+    { key: 'geminiApiKey', label: 'API Key', type: 'password', placeholder: 'AIzaSy...' },
+    { key: 'geminiModel', label: 'LLM Model', type: 'text', placeholder: 'gemini-2.5-flash' },
+  ],
   cohere: [
     { key: 'cohereApiKey', label: 'API Key', type: 'password', placeholder: 'API key (optional, for re-ranking)' },
   ],

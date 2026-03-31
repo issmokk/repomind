@@ -1,6 +1,5 @@
 import { Ollama } from 'ollama'
 import type { EmbeddingProvider } from './types'
-import { validateProviderDimensions } from './types'
 
 const MAX_RETRIES = 3
 const RETRY_BASE_MS = 1000
@@ -8,7 +7,7 @@ const DEFAULT_TIMEOUT_MS = 30_000
 
 export class OllamaProvider implements EmbeddingProvider {
   readonly name: string
-  readonly dimensions = 1536
+  private _dimensions: number | null = null
   private client: Ollama
   private model: string
   private timeoutMs: number
@@ -21,8 +20,16 @@ export class OllamaProvider implements EmbeddingProvider {
     this.client = new Ollama({ host })
   }
 
+  get dimensions(): number {
+    if (this._dimensions === null) {
+      throw new Error('Dimensions not yet detected. Call embedSingle first or call validateDimensions.')
+    }
+    return this._dimensions
+  }
+
   async validateDimensions(): Promise<void> {
-    await validateProviderDimensions(this)
+    const testVector = await this.embedSingle('dimension validation test')
+    this._dimensions = testVector.length
   }
 
   async embedSingle(text: string): Promise<number[]> {
@@ -32,7 +39,11 @@ export class OllamaProvider implements EmbeddingProvider {
         const result = await this.withTimeout(
           this.client.embed({ model: this.model, input: text }),
         )
-        return result.embeddings[0]
+        const vector = result.embeddings[0]
+        if (this._dimensions === null) {
+          this._dimensions = vector.length
+        }
+        return vector
       } catch (err) {
         lastError = err as Error
         const msg = lastError.message ?? ''

@@ -322,7 +322,7 @@ describe('RAG Schema Integration Tests', () => {
       expect(error).toBeNull()
       expect(data!.embedding_provider).toBe('ollama')
       expect(data!.ollama_base_url).toBe('http://localhost:11434')
-      expect(data!.ollama_model).toBe('gte-qwen2-1.5b-instruct')
+      expect(data!.ollama_model).toBe('rjmalagon/gte-qwen2-1.5b-instruct-embed-f16')
       expect(data!.provider_order).toEqual(['ollama'])
       expect(data!.claude_api_key).toBeNull()
       expect(data!.openai_api_key).toBeNull()

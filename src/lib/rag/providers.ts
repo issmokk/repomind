@@ -3,6 +3,7 @@ import type { TeamSettings } from '@/types/settings'
 import type { EmbeddingProvider } from '@/lib/indexer/embedding/types'
 import { OllamaProvider } from '@/lib/indexer/embedding/ollama'
 import { OpenAIProvider } from '@/lib/indexer/embedding/openai'
+import { GeminiProvider } from '@/lib/indexer/embedding/gemini'
 
 let ollamaHealthCache: { healthy: boolean; checkedAt: number } | null = null
 const HEALTH_CACHE_TTL_MS = 30_000
@@ -48,6 +49,14 @@ export async function getLanguageModel(
         }
         break
       }
+      case 'gemini': {
+        if (teamSettings.geminiApiKey && !teamSettings.geminiApiKey.startsWith('****')) {
+          const { createGoogleGenerativeAI } = await import('@ai-sdk/google')
+          const google = createGoogleGenerativeAI({ apiKey: teamSettings.geminiApiKey })
+          return google(teamSettings.geminiModel || 'gemini-2.5-flash') as LanguageModel
+        }
+        break
+      }
       case 'claude': {
         if (teamSettings.claudeApiKey && !teamSettings.claudeApiKey.startsWith('****')) {
           const { createAnthropic } = await import('@ai-sdk/anthropic')
@@ -68,12 +77,18 @@ export async function getLanguageModel(
   }
 
   throw new Error(
-    'No LLM provider available. Configure providers in Team Settings: Ollama (start server), Claude (add API key), or OpenAI (add API key).'
+    'No LLM provider available. Configure providers in Team Settings: Ollama (start server), Gemini (add API key), Claude (add API key), or OpenAI (add API key).'
   )
 }
 
 export function getEmbeddingProvider(teamSettings: TeamSettings): EmbeddingProvider {
   const provider = teamSettings.embeddingProvider || 'ollama'
+  if (provider === 'gemini') {
+    return new GeminiProvider(
+      teamSettings.geminiApiKey || '',
+      teamSettings.geminiEmbeddingModel || undefined
+    )
+  }
   if (provider === 'openai') {
     return new OpenAIProvider(teamSettings.openaiModel || undefined)
   }

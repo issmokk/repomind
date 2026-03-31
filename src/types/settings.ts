@@ -1,4 +1,4 @@
-export type EmbeddingProvider = 'ollama' | 'openai'
+export type EmbeddingProvider = 'ollama' | 'openai' | 'gemini'
 
 export type TeamSettings = {
   id: string
@@ -15,6 +15,9 @@ export type TeamSettings = {
   openaiApiKey: string | null
   openaiLlmModel: string
   cohereApiKey: string | null
+  geminiApiKey: string | null
+  geminiModel: string
+  geminiEmbeddingModel: string
   maxGraphHops: number
   searchTopK: number
   searchRrfK: number

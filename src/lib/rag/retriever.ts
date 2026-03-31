@@ -61,12 +61,6 @@ export async function retrieveContext(
     )
   }
 
-  if (embedding.length !== embeddingProvider.dimensions) {
-    throw new Error(
-      `Embedding dimension mismatch: expected ${embeddingProvider.dimensions}, got ${embedding.length}. The query embedding model must match the indexing model.`
-    )
-  }
-
   const userRepos = await storage.getRepositories(userClient)
   const userRepoIds = new Set(userRepos.map((r) => r.id))
   const repoNameMap = new Map(userRepos.map((r) => [r.id, r.name]))

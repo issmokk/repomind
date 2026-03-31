@@ -4,9 +4,9 @@ import { encrypt, decrypt, maskApiKey, isMaskedValue } from '@/lib/crypto'
 
 export const runtime = 'nodejs'
 
-const VALID_PROVIDERS = new Set(['ollama', 'claude', 'openai', 'cohere'])
+const VALID_PROVIDERS = new Set(['ollama', 'gemini', 'claude', 'openai', 'cohere'])
 
-const API_KEY_FIELDS = ['claudeApiKey', 'openaiApiKey', 'cohereApiKey'] as const
+const API_KEY_FIELDS = ['claudeApiKey', 'openaiApiKey', 'cohereApiKey', 'geminiApiKey'] as const
 
 function maskSettings(settings: Record<string, unknown>): Record<string, unknown> {
   const masked = { ...settings }
@@ -87,7 +87,8 @@ export async function PUT(req: Request) {
   const ALLOWED_FIELDS = new Set([
     'providerOrder', 'ollamaBaseUrl', 'ollamaModel', 'ollamaLlmModel',
     'claudeApiKey', 'claudeModel', 'openaiApiKey', 'openaiLlmModel',
-    'cohereApiKey', 'searchTopK', 'maxGraphHops', 'searchRrfK',
+    'cohereApiKey', 'geminiApiKey', 'geminiModel', 'geminiEmbeddingModel',
+    'searchTopK', 'maxGraphHops', 'searchRrfK',
     'embeddingProvider', 'openaiModel',
   ])
   const filtered: Record<string, unknown> = {}

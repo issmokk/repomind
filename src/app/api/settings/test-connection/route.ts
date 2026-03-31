@@ -67,6 +67,15 @@ export async function POST(req: Request) {
         if (!res.ok) throw new Error(`OpenAI returned ${res.status}`)
         return NextResponse.json({ success: true, message: 'Connected to OpenAI' })
       }
+      case 'gemini': {
+        const apiKey = config.geminiApiKey
+        if (!apiKey) return NextResponse.json({ success: false, message: 'API key required' })
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`, {
+          signal: AbortSignal.timeout(10000),
+        })
+        if (!res.ok) throw new Error(`Gemini returned ${res.status}`)
+        return NextResponse.json({ success: true, message: 'Connected to Google Gemini' })
+      }
       case 'cohere': {
         const apiKey = config.cohereApiKey
         if (!apiKey) return NextResponse.json({ success: false, message: 'API key required' })

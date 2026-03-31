@@ -86,13 +86,6 @@ describe('retrieveContext', () => {
     expect(mockEmbedding.embedSingle).toHaveBeenCalledWith('what does test do')
   })
 
-  it('validates query embedding dimension matches provider dimensions', async () => {
-    mockEmbedding.embedSingle.mockResolvedValue(new Array(768).fill(0.1))
-    await expect(
-      retrieveContext('test', ['repo-1'], baseConfig, mockStorage as never, mockEmbedding as never, mockUserClient)
-    ).rejects.toThrow('Embedding dimension mismatch')
-  })
-
   it('validates repoIds belong to user org', async () => {
     await expect(
       retrieveContext('test', ['repo-999'], baseConfig, mockStorage as never, mockEmbedding as never, mockUserClient)

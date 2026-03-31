@@ -14,7 +14,7 @@ import { SearchConfig } from '@/components/settings/search-config'
 import { RepoSettingsTable } from '@/components/settings/repo-settings-table'
 import type { TeamSettings } from '@/types/settings'
 
-const ALL_PROVIDERS = ['ollama', 'claude', 'openai', 'cohere']
+const ALL_PROVIDERS = ['ollama', 'gemini', 'claude', 'openai', 'cohere']
 
 export default function SettingsPage() {
   const { data: settings, isLoading, mutate } = useSWR<TeamSettings>('/api/settings/team', fetcher)
@@ -35,6 +35,8 @@ export default function SettingsPage() {
     openaiApiKey: settings?.openaiApiKey ?? '',
     openaiLlmModel: settings?.openaiLlmModel ?? '',
     cohereApiKey: settings?.cohereApiKey ?? '',
+    geminiApiKey: settings?.geminiApiKey ?? '',
+    geminiModel: settings?.geminiModel ?? '',
     ...configValues,
   }
 

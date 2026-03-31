@@ -37,6 +37,9 @@ const DEFAULT_TEAM_SETTINGS: Omit<TeamSettings, 'id' | 'orgId' | 'teamId' | 'cre
   openaiApiKey: null,
   openaiLlmModel: 'gpt-4o',
   cohereApiKey: null,
+  geminiApiKey: null,
+  geminiModel: 'gemini-2.5-flash',
+  geminiEmbeddingModel: 'gemini-embedding-001',
   maxGraphHops: 2,
   searchTopK: 10,
   searchRrfK: 60,
@@ -545,6 +548,7 @@ export class SupabaseStorageProvider implements StorageProvider {
     settings.claudeApiKey = maskApiKey(settings.claudeApiKey)
     settings.openaiApiKey = maskApiKey(settings.openaiApiKey)
     settings.cohereApiKey = maskApiKey(settings.cohereApiKey)
+    settings.geminiApiKey = maskApiKey(settings.geminiApiKey)
     return settings
   }
 
@@ -564,6 +568,7 @@ export class SupabaseStorageProvider implements StorageProvider {
     settings.claudeApiKey = maskApiKey(settings.claudeApiKey)
     settings.openaiApiKey = maskApiKey(settings.openaiApiKey)
     settings.cohereApiKey = maskApiKey(settings.cohereApiKey)
+    settings.geminiApiKey = maskApiKey(settings.geminiApiKey)
     return settings
   }
 }
