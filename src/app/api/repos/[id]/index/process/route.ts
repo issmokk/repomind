@@ -22,7 +22,13 @@ export async function POST(
   const ghClient = new GitHubClient(ghAuth)
   const fileCache = new GitHubFileCache(ghClient, ctx.storage)
   const settings = await ctx.storage.getSettings(id, ctx.supabase)
-  const embeddingProvider = createEmbeddingProvider(settings?.embeddingProvider ?? 'ollama')
+  const teamSettings = await ctx.storage.getTeamSettingsDecrypted(ctx.orgId)
+  const embeddingProvider = createEmbeddingProvider(settings?.embeddingProvider ?? 'ollama', {
+    geminiApiKey: teamSettings.geminiApiKey ?? undefined,
+    geminiEmbeddingModel: teamSettings.geminiEmbeddingModel,
+    ollamaModel: teamSettings.ollamaModel,
+    ollamaBaseUrl: teamSettings.ollamaBaseUrl,
+  })
 
   const result = await processNextBatch(
     activeJob.id, id, ctx.storage, ghClient, fileCache, embeddingProvider,

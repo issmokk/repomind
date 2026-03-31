@@ -32,6 +32,10 @@ const mockStorage = {
     Promise.resolve({ id: 'repo-1', orgId: 'org-1', name: 'test', fullName: 'test/test' }),
   ),
   getSettings: vi.fn(() => Promise.resolve(null)),
+  getTeamSettingsDecrypted: vi.fn(() => Promise.resolve({
+    embeddingProvider: 'ollama', ollamaModel: 'test', ollamaBaseUrl: 'http://localhost:11434',
+    geminiApiKey: null, geminiEmbeddingModel: 'gemini-embedding-001',
+  })),
 };
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -54,6 +58,7 @@ vi.mock('@/lib/storage/supabase', () => ({
     getLatestJob = mockStorage.getLatestJob;
     getRepository = mockStorage.getRepository;
     getSettings = mockStorage.getSettings;
+    getTeamSettingsDecrypted = mockStorage.getTeamSettingsDecrypted;
   },
 }));
 

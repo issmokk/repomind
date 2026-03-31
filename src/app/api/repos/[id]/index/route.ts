@@ -44,7 +44,13 @@ export async function POST(
   const fileCache = new GitHubFileCache(ghClient, ctx.storage)
 
   const settings = await ctx.storage.getSettings(id, ctx.supabase)
-  const embeddingProvider = createEmbeddingProvider(settings?.embeddingProvider ?? 'ollama')
+  const teamSettings = await ctx.storage.getTeamSettingsDecrypted(ctx.orgId)
+  const embeddingProvider = createEmbeddingProvider(settings?.embeddingProvider ?? 'ollama', {
+    geminiApiKey: teamSettings.geminiApiKey ?? undefined,
+    geminiEmbeddingModel: teamSettings.geminiEmbeddingModel,
+    ollamaModel: teamSettings.ollamaModel,
+    ollamaBaseUrl: teamSettings.ollamaBaseUrl,
+  })
 
   try {
     const job = await startIndexingJob(ctx.repo, ctx.storage, ghClient, fileCache, embeddingProvider, {

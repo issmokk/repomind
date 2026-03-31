@@ -18,6 +18,7 @@ import type { GraphEdge, GraphEdgeInsert } from '@/types/graph'
 import type { TeamSettings, TeamSettingsUpdate } from '@/types/settings'
 import type { HybridSearchResult, NewChatMessage, ChatMessage, NewQueryFeedback } from '@/lib/rag/types'
 import type { StorageProvider } from './types'
+import { decrypt } from '@/lib/crypto'
 
 function maskApiKey(key: string | null): string | null {
   if (!key) return null
@@ -549,6 +550,45 @@ export class SupabaseStorageProvider implements StorageProvider {
     settings.openaiApiKey = maskApiKey(settings.openaiApiKey)
     settings.cohereApiKey = maskApiKey(settings.cohereApiKey)
     settings.geminiApiKey = maskApiKey(settings.geminiApiKey)
+    return settings
+  }
+
+  async getTeamSettingsDecrypted(orgId: string): Promise<TeamSettings> {
+    const result = await this.serviceClient
+      .from('team_settings')
+      .select('*')
+      .eq('org_id', orgId)
+      .maybeSingle()
+
+    const { data, error } = result
+    if (error) {
+      throw new Error(`Storage error in getTeamSettingsDecrypted: ${error.message}`)
+    }
+
+    if (!data) {
+      return {
+        id: '',
+        orgId,
+        teamId: orgId,
+        ...DEFAULT_TEAM_SETTINGS,
+        createdAt: '',
+        updatedAt: '',
+      }
+    }
+
+    const settings = toCamelCase<TeamSettings>(data)
+    settings.teamId = settings.orgId
+    const apiKeyFields = ['claudeApiKey', 'openaiApiKey', 'cohereApiKey', 'geminiApiKey'] as const
+    for (const field of apiKeyFields) {
+      const val = settings[field]
+      if (typeof val === 'string' && val.length > 0) {
+        try {
+          (settings as Record<string, unknown>)[field] = decrypt(val)
+        } catch {
+          (settings as Record<string, unknown>)[field] = null
+        }
+      }
+    }
     return settings
   }
 

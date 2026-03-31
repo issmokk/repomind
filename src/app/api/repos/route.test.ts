@@ -52,6 +52,11 @@ const mockStorage = {
   })),
   updateSettings: vi.fn(async (_id: string, data: Record<string, unknown>) => ({ id: 's-1', ...data })),
   createDefaultSettings: vi.fn(async () => ({})),
+  getTeamSettingsDecrypted: vi.fn(async () => ({
+    embeddingProvider: 'ollama', ollamaModel: 'test-model', ollamaBaseUrl: 'http://localhost:11434',
+    geminiApiKey: null, geminiEmbeddingModel: 'gemini-embedding-001',
+    ollamaLlmModel: 'test', providerOrder: ['ollama'],
+  })),
 }
 
 function makeRequest(method: string, body?: unknown, url = 'http://localhost/api/repos') {

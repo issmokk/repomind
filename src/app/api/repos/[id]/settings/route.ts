@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getRepoContext } from '../../_helpers'
 
-const VALID_PROVIDERS = new Set(['ollama', 'openai'])
+const VALID_PROVIDERS = new Set(['ollama', 'openai', 'gemini'])
 
 export async function GET(
   _request: NextRequest,

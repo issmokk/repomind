@@ -77,6 +77,7 @@ export interface StorageProvider {
   saveFeedback(data: NewQueryFeedback): Promise<void>
 
   getTeamSettings(orgId: string): Promise<TeamSettings>
+  getTeamSettingsDecrypted(orgId: string): Promise<TeamSettings>
 
   updateTeamSettings(orgId: string, data: TeamSettingsUpdate): Promise<TeamSettings>
 }

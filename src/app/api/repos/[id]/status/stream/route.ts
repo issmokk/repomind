@@ -23,7 +23,13 @@ export async function GET(
   const ghClient = new GitHubClient(ghAuth)
   const fileCache = new GitHubFileCache(ghClient, ctx.storage)
   const settings = await ctx.storage.getSettings(id, ctx.supabase)
-  const embeddingProvider = createEmbeddingProvider(settings?.embeddingProvider ?? 'ollama')
+  const teamSettings = await ctx.storage.getTeamSettingsDecrypted(ctx.orgId)
+  const embeddingProvider = createEmbeddingProvider(settings?.embeddingProvider ?? 'ollama', {
+    geminiApiKey: teamSettings.geminiApiKey ?? undefined,
+    geminiEmbeddingModel: teamSettings.geminiEmbeddingModel,
+    ollamaModel: teamSettings.ollamaModel,
+    ollamaBaseUrl: teamSettings.ollamaBaseUrl,
+  })
 
   const encoder = new TextEncoder()
   let pollTimer: ReturnType<typeof setInterval> | null = null

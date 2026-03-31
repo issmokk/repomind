@@ -96,7 +96,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const teamSettings = await auth.storage.getTeamSettings(auth.orgId)
+    const teamSettings = await auth.storage.getTeamSettingsDecrypted(auth.orgId)
     const analysis = analyzeQuery(question, { maxGraphHops: teamSettings.maxGraphHops })
 
     const ragConfig: RagConfig = {
