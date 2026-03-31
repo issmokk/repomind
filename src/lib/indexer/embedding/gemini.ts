@@ -53,7 +53,9 @@ export class GeminiProvider implements EmbeddingProvider {
         })
 
         if (response.status === 429) {
-          await new Promise((r) => setTimeout(r, RETRY_BASE_MS * Math.pow(2, attempt)))
+          lastError = new Error(`Gemini API rate limited (429)`)
+          const retryAfter = parseInt(response.headers.get('Retry-After') ?? '5', 10)
+          await new Promise((r) => setTimeout(r, Math.max(retryAfter * 1000, RETRY_BASE_MS * Math.pow(2, attempt))))
           continue
         }
 
