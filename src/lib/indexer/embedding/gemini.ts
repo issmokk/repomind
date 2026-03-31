@@ -1,7 +1,7 @@
 import type { EmbeddingProvider } from './types'
 import { validateProviderDimensions } from './types'
 
-const MAX_RETRIES = 3
+const MAX_RETRIES = 2
 const RETRY_BASE_MS = 1000
 
 export class GeminiProvider implements EmbeddingProvider {
@@ -49,7 +49,7 @@ export class GeminiProvider implements EmbeddingProvider {
             model: `models/${this.model}`,
             content: { parts: [{ text }] },
           }),
-          signal: AbortSignal.timeout(30_000),
+          signal: AbortSignal.timeout(10_000),
         })
 
         if (response.status === 429) {
@@ -69,7 +69,7 @@ export class GeminiProvider implements EmbeddingProvider {
       } catch (err) {
         lastError = err as Error
         const msg = lastError.message ?? ''
-        if (msg.includes('ECONNREFUSED') || msg.includes('ETIMEDOUT')) {
+        if (msg.includes('ECONNREFUSED') || msg.includes('ETIMEDOUT') || msg.includes('abort') || msg.includes('timeout')) {
           await new Promise((r) => setTimeout(r, RETRY_BASE_MS * Math.pow(2, attempt)))
           continue
         }
@@ -77,6 +77,6 @@ export class GeminiProvider implements EmbeddingProvider {
       }
     }
 
-    throw lastError ?? new Error('Gemini embedding API failed after retries')
+    throw lastError ?? new Error(`Gemini embedding API failed after retries. Key length: ${this.apiKey.length}`)
   }
 }
