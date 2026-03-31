@@ -77,6 +77,6 @@ export class GeminiProvider implements EmbeddingProvider {
       }
     }
 
-    throw lastError ?? new Error(`Gemini embedding API failed after retries. Key length: ${this.apiKey.length}`)
+    throw new Error(`Gemini embedding API failed after ${MAX_RETRIES} retries. Last error: ${lastError?.message ?? 'unknown'}. Key length: ${this.apiKey.length}`)
   }
 }
