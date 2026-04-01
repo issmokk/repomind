@@ -39,6 +39,10 @@ vi.mock('@/lib/indexer/pipeline', () => ({
   PipelineError: class extends Error { statusCode: number; constructor(msg: string, code: number) { super(msg); this.statusCode = code } },
 }))
 
+vi.mock('@/lib/inngest/client', () => ({
+  inngest: { send: vi.fn(async () => {}) },
+}))
+
 const mockStorage = {
   createRepository: vi.fn(async (data: Record<string, unknown>) => ({ id: 'repo-1', ...data })),
   getRepositories: vi.fn(async () => [{ id: 'repo-1', name: 'repo', fullName: 'owner/repo' }]),
@@ -46,6 +50,10 @@ const mockStorage = {
   deleteRepository: vi.fn(async () => {}),
   getLatestJob: vi.fn(async () => ({ id: 'job-1', status: 'completed' })),
   getActiveJob: vi.fn(async () => null),
+  createJob: vi.fn(async (data: Record<string, unknown>) => ({
+    id: 'job-1', status: 'pending', repoId: data.repoId, ...data,
+  })),
+  updateJobStatus: vi.fn(async () => {}),
   getSettings: vi.fn(async () => ({
     id: 's-1', repoId: 'repo-1', branchFilter: ['main'], includePatterns: [], excludePatterns: [],
     embeddingProvider: 'ollama', embeddingModel: 'gte-qwen2-1.5b-instruct', autoIndexOnAdd: false,
@@ -112,37 +120,25 @@ describe('DELETE /api/repos/:id', () => {
 })
 
 describe('POST /api/repos/:id/index', () => {
-  it('creates indexing job', async () => {
+  it('creates job and sends Inngest event with jobId', async () => {
     const { POST } = await import('./[id]/index/route')
     const res = await POST(makeRequest('POST', {}), { params: Promise.resolve({ id: 'repo-1' }) })
     const data = await res.json()
     expect(res.status).toBe(200)
     expect(data.jobId).toBe('job-1')
+    expect(mockStorage.createJob).toHaveBeenCalled()
+    const { inngest } = await import('@/lib/inngest/client')
+    expect(inngest.send).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'repo/index',
+      data: expect.objectContaining({ jobId: 'job-1' }),
+    }))
   })
 
-  it('returns 409 for PipelineError with 409 status', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    const { startIndexingJob } = await import('@/lib/indexer/pipeline')
-    const { PipelineError } = await import('@/lib/indexer/pipeline')
-    vi.mocked(startIndexingJob).mockRejectedValueOnce(new PipelineError('Already indexing', 409))
-
+  it('returns 409 when active job exists', async () => {
+    mockStorage.getActiveJob.mockResolvedValueOnce({ id: 'existing', status: 'processing' })
     const { POST } = await import('./[id]/index/route')
     const res = await POST(makeRequest('POST', {}), { params: Promise.resolve({ id: 'repo-1' }) })
     expect(res.status).toBe(409)
-    const data = await res.json()
-    expect(data.error).toBe('Already indexing')
-  })
-
-  it('returns 500 for unexpected errors', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    const { startIndexingJob } = await import('@/lib/indexer/pipeline')
-    vi.mocked(startIndexingJob).mockRejectedValueOnce(new Error('Connection failed'))
-
-    const { POST } = await import('./[id]/index/route')
-    const res = await POST(makeRequest('POST', {}), { params: Promise.resolve({ id: 'repo-1' }) })
-    expect(res.status).toBe(500)
-    const data = await res.json()
-    expect(data.error).toBe('Connection failed')
   })
 
   it('returns 404 when repo not found', async () => {

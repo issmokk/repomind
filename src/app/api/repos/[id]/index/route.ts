@@ -1,8 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getRepoContext } from '../../_helpers'
-import { startIndexingJob, PipelineError } from '@/lib/indexer/pipeline'
-import { GitHubClient, PersonalAccessTokenAuth, GitHubFileCache } from '@/lib/github'
-import { createEmbeddingProvider } from '@/lib/indexer/embedding'
+import { inngest } from '@/lib/inngest/client'
 
 export async function DELETE(
   _request: NextRequest,
@@ -36,37 +34,40 @@ export async function POST(
   const ctx = await getRepoContext(id)
   if (ctx instanceof NextResponse) return ctx
 
+  const activeJob = await ctx.storage.getActiveJob(id)
+  if (activeJob) {
+    return NextResponse.json({ error: 'Indexing already in progress for this repository' }, { status: 409 })
+  }
+
   const body = await request.json().catch(() => ({}))
-  const triggerType = body.trigger === 'git_diff' ? 'git_diff' : 'manual'
+  const triggerType = body.trigger === 'git_diff' ? 'webhook' : 'manual'
 
-  const ghAuth = new PersonalAccessTokenAuth()
-  const ghClient = new GitHubClient(ghAuth)
-  const fileCache = new GitHubFileCache(ghClient, ctx.storage)
-
-  const settings = await ctx.storage.getSettings(id, ctx.supabase)
-  const teamSettings = await ctx.storage.getTeamSettingsDecrypted(ctx.orgId)
-  const embeddingProvider = createEmbeddingProvider(settings?.embeddingProvider ?? 'ollama', {
-    geminiApiKey: teamSettings.geminiApiKey ?? undefined,
-    geminiEmbeddingModel: teamSettings.geminiEmbeddingModel,
-    ollamaModel: teamSettings.ollamaModel,
-    ollamaBaseUrl: teamSettings.ollamaBaseUrl,
+  const job = await ctx.storage.createJob({
+    repoId: id,
+    triggerType: triggerType === 'webhook' ? 'git_diff' : 'manual',
+    toCommit: ctx.repo.defaultBranch ?? 'main',
+    fromCommit: ctx.repo.lastIndexedCommit,
   })
 
   try {
-    const job = await startIndexingJob(ctx.repo, ctx.storage, ghClient, fileCache, embeddingProvider, {
-      triggerType,
-    })
-    return NextResponse.json({
-      jobId: job.id,
-      status: job.status,
-      processedFiles: job.processedFiles,
-      totalFiles: job.totalFiles,
+    await inngest.send({
+      name: 'repo/index',
+      data: {
+        repoId: id,
+        jobId: job.id,
+        triggerType: triggerType as 'manual' | 'webhook',
+      },
     })
   } catch (err) {
-    console.error('Indexing failed:', err)
-    if (err instanceof PipelineError && err.statusCode === 409) {
-      return NextResponse.json({ error: err.message }, { status: 409 })
-    }
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 })
+    await ctx.storage.updateJobStatus(job.id, 'failed', {
+      errorLog: [{ error: `Failed to dispatch indexing: ${(err as Error).message}`, timestamp: new Date().toISOString() }],
+      completedAt: new Date().toISOString(),
+    })
+    return NextResponse.json({ error: 'Failed to start indexing' }, { status: 500 })
   }
+
+  return NextResponse.json({
+    jobId: job.id,
+    status: job.status,
+  })
 }
