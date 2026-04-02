@@ -71,6 +71,7 @@
     "tree-sitter-wasm-prebuilt": "^0.0.3",
     "tsx": "^4.21.0",
     "typescript": "^5",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.2",
+    "yaml": "^2.8.3"
   }
 }
