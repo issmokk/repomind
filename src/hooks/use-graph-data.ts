@@ -72,6 +72,7 @@ export function useGraphData(filters: GraphFilters) {
   }
 
   return {
+    edges: data?.edges ?? [],
     elements,
     nodeCount: data?.nodeCount ?? 0,
     edgeCount: data?.edgeCount ?? 0,
