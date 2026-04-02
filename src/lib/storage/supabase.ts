@@ -192,6 +192,21 @@ export class SupabaseStorageProvider implements StorageProvider {
     return row ? toCamelCase<CachedFile>(row) : null
   }
 
+  async listCachedFilePaths(repoId: string, extension?: string): Promise<string[]> {
+    let query = this.serviceClient
+      .from('cached_files')
+      .select('file_path')
+      .eq('repo_id', repoId)
+
+    if (extension) {
+      query = query.like('file_path', `%.${extension}`)
+    }
+
+    const result = await query
+    const rows = assertNoError(result, 'listCachedFilePaths')
+    return (rows as Array<{ file_path: string }>).map(r => r.file_path)
+  }
+
   async setCachedFile(repoId: string, file: CachedFileUpsert): Promise<void> {
     const row = { ...toSnakeCase(file as unknown as Record<string, unknown>), repo_id: repoId }
     const result = await this.serviceClient

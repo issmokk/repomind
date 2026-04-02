@@ -31,6 +31,7 @@ export interface StorageProvider {
   updateSettings(repoId: string, data: RepositorySettingsUpdate): Promise<RepositorySettings>
 
   getCachedFile(repoId: string, filePath: string): Promise<CachedFile | null>
+  listCachedFilePaths(repoId: string, extension?: string): Promise<string[]>
   setCachedFile(repoId: string, file: CachedFileUpsert): Promise<void>
   bulkSetCachedFiles(repoId: string, files: CachedFileUpsert[]): Promise<void>
   bulkInvalidateCache(repoId: string): Promise<void>
