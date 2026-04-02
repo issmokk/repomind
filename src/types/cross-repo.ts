@@ -22,3 +22,25 @@ export type CrossRepoRelationshipType =
   | 'npm_dependency'
   | 'event_publish'
   | 'event_subscribe'
+
+export type RepoLinkWithMemberships = RepoLink & {
+  memberships: RepoLinkMembership[]
+  repos: Array<{ id: string; name: string; fullName: string }>
+}
+
+export type CreateLinkGroupRequest = {
+  name: string
+  repoIds: string[]
+}
+
+export type UpdateLinkGroupRequest = {
+  name?: string
+  addRepoIds?: string[]
+  removeRepoIds?: string[]
+}
+
+export type AnalysisResult = {
+  edgeCount: number
+  byType: Record<string, number>
+  skippedRepos: string[]
+}
