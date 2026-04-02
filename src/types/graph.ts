@@ -26,4 +26,6 @@ export type GraphEdge = {
   createdAt: string
 }
 
-export type GraphEdgeInsert = Omit<GraphEdge, 'id' | 'createdAt'>
+export type GraphEdgeInsert = Omit<GraphEdge, 'id' | 'createdAt' | 'confidence'> & {
+  confidence?: number | null
+}

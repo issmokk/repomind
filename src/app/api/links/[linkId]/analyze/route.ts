@@ -67,7 +67,8 @@ export async function POST(
       targetSymbol: e.targetSymbol,
       targetType: null,
       relationshipType: e.relationshipType,
-      metadata: { ...e.metadata, confidence: e.confidence },
+      confidence: e.confidence,
+      metadata: e.metadata,
     }))
     await auth.storage.upsertEdges(inserts)
   }
