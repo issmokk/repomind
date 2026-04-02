@@ -50,7 +50,7 @@ export function GraphCanvas({ elements, isLoading, layout, searchQuery, onNodeDo
     onNodeDoubleClick: handleNodeDblClick,
   }), [layout, handleNodeClick, handleNodeDblClick])
 
-  const { highlightNodes, dimNonMatching } = useGraphVisualization(containerRef, elements, vizOptions)
+  const { highlightNodes, dimNonMatching, zoomToNodes } = useGraphVisualization(containerRef, elements, vizOptions)
 
   useEffect(() => {
     if (!elements || !searchQuery) {
@@ -64,7 +64,8 @@ export function GraphCanvas({ elements, isLoading, layout, searchQuery, onNodeDo
       .map((n) => n.data.id)
     highlightNodes(matching)
     dimNonMatching(matching)
-  }, [searchQuery, elements, highlightNodes, dimNonMatching])
+    if (matching.length) zoomToNodes(matching)
+  }, [searchQuery, elements, highlightNodes, dimNonMatching, zoomToNodes])
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {

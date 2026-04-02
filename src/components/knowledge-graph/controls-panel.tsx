@@ -7,17 +7,19 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { GraphLegend } from './graph-legend'
+import { GraphFiltersPanel } from './graph-filters'
 import type { GraphFilters } from '@/hooks/use-graph-data'
 
 const LAYOUTS = [
   { value: 'cose', label: 'Force-directed' },
   { value: 'dagre', label: 'Hierarchical' },
+  { value: 'fcose', label: 'Fast Compound' },
   { value: 'circle', label: 'Circular' },
   { value: 'breadthfirst', label: 'Breadthfirst' },
 ]
 
 const SYMBOL_TYPES = ['function', 'class', 'module', 'file', 'package']
-const RELATIONSHIP_TYPES = ['calls', 'imports', 'inherits', 'composes', 'depends_on', 'external_dep']
+const RELATIONSHIP_TYPES = ['calls', 'imports', 'inherits', 'composes', 'depends_on', 'external_dep', 'gem_dependency', 'npm_dependency', 'event_publish', 'event_subscribe']
 
 export type ControlsPanelProps = {
   repos: Array<{ id: string; fullName: string }>
@@ -26,6 +28,11 @@ export type ControlsPanelProps = {
   filters: GraphFilters
   onFilterChange: (filters: GraphFilters) => void
   onSearch: (query: string) => void
+  showCrossRepo: boolean
+  onShowCrossRepoChange: (show: boolean) => void
+  confidenceThreshold: number
+  onConfidenceThresholdChange: (threshold: number) => void
+  hasCrossRepoData: boolean
 }
 
 export function ControlsPanel({
@@ -35,6 +42,11 @@ export function ControlsPanel({
   filters,
   onFilterChange,
   onSearch,
+  showCrossRepo,
+  onShowCrossRepoChange,
+  confidenceThreshold,
+  onConfidenceThresholdChange,
+  hasCrossRepoData,
 }: ControlsPanelProps) {
   const [searchInput, setSearchInput] = useState('')
 
@@ -141,6 +153,14 @@ export function ControlsPanel({
           })}
         </div>
       </div>
+
+      <GraphFiltersPanel
+        showCrossRepo={showCrossRepo}
+        onShowCrossRepoChange={onShowCrossRepoChange}
+        confidenceThreshold={confidenceThreshold}
+        onConfidenceThresholdChange={onConfidenceThresholdChange}
+        hasCrossRepoData={hasCrossRepoData}
+      />
 
       <GraphLegend />
     </div>

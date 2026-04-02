@@ -19,12 +19,24 @@ const EDGE_STYLES: Record<string, { lineStyle: string; width: number; color: str
   composes: { lineStyle: 'solid', width: 3, color: '#64748b' },
   depends_on: { lineStyle: 'solid', width: 1, color: '#94a3b8' },
   external_dep: { lineStyle: 'dashed', width: 1, color: '#94a3b8' },
+  gem_dependency: { lineStyle: 'dashed', width: 2, color: '#f97316' },
+  npm_dependency: { lineStyle: 'dashed', width: 2, color: '#22c55e' },
+  event_publish: { lineStyle: 'dashed', width: 2, color: '#a855f7' },
+  event_subscribe: { lineStyle: 'dashed', width: 2, color: '#a855f7' },
 }
 
 const DEFAULT_NODE_STYLE = { shape: 'ellipse', color: '#6b7280' }
 const DEFAULT_EDGE_STYLE = { lineStyle: 'solid', width: 1, color: '#94a3b8' }
 
 let dagreRegistered = false
+let fcoseRegistered = false
+
+function getLayoutOptions(layoutName: string, isLarge: boolean) {
+  const base = { animate: !isLarge, animationDuration: 500 }
+  if (layoutName === 'dagre') return { ...base, name: 'dagre', rankDir: 'TB' }
+  if (layoutName === 'fcose') return { ...base, name: 'fcose', quality: 'default', randomize: false, nodeSeparation: 75 }
+  return { ...base, name: layoutName }
+}
 
 type Options = {
   layout: string
@@ -45,15 +57,20 @@ export function useGraphVisualization(
     let cancelled = false
 
     async function init() {
-      const [{ default: cytoscape }, { default: dagre }] = await Promise.all([
+      const [{ default: cytoscape }, { default: dagre }, { default: fcose }] = await Promise.all([
         import('cytoscape'),
         import('cytoscape-dagre'),
+        import('cytoscape-fcose'),
       ])
       if (cancelled) return
 
       if (!dagreRegistered) {
         cytoscape.use(dagre as never)
         dagreRegistered = true
+      }
+      if (!fcoseRegistered) {
+        cytoscape.use(fcose as never)
+        fcoseRegistered = true
       }
 
       const cy = cytoscape({
@@ -131,6 +148,16 @@ export function useGraphVisualization(
               'border-color': '#facc15',
             },
           },
+          {
+            selector: 'node[repoPrefix]',
+            style: {
+              label: 'data(repoPrefix)' as never,
+              'text-valign': 'top',
+              'text-margin-y': -4,
+              'font-size': '9px',
+              'border-style': 'dashed' as never,
+            },
+          },
         ] as never,
         layout: { name: 'preset' },
         wheelSensitivity: 0.3,
@@ -194,12 +221,7 @@ export function useGraphVisualization(
     })
 
     const isLargeGraph = elements.nodes.length > 300
-    cy.layout({
-      name: options.layout === 'dagre' ? 'dagre' : options.layout,
-      animate: !isLargeGraph,
-      animationDuration: 500,
-      ...(options.layout === 'dagre' ? { rankDir: 'TB' } : {}),
-    } as never).run()
+    cy.layout(getLayoutOptions(options.layout, isLargeGraph) as never).run()
   }, [elements, options.layout, cyReady])
 
   const fitToView = useCallback(() => {
@@ -224,17 +246,20 @@ export function useGraphVisualization(
     cy.edges().filter((e) => !idSet.has(e.source().id()) && !idSet.has(e.target().id())).addClass('dimmed')
   }, [])
 
+  const zoomToNodes = useCallback((ids: string[]) => {
+    const cy = cyRef.current
+    if (!cy || !ids.length) return
+    const idSet = new Set(ids)
+    const matched = cy.nodes().filter((n) => idSet.has(n.id()))
+    if (matched.length) cy.fit(matched, 40)
+  }, [])
+
   const runLayout = useCallback((layoutName: string) => {
     const cy = cyRef.current
     if (!cy) return
     const isLarge = cy.nodes().length > 300
-    cy.layout({
-      name: layoutName === 'dagre' ? 'dagre' : layoutName,
-      animate: !isLarge,
-      animationDuration: 500,
-      ...(layoutName === 'dagre' ? { rankDir: 'TB' } : {}),
-    } as never).run()
+    cy.layout(getLayoutOptions(layoutName, isLarge) as never).run()
   }, [])
 
-  return { fitToView, highlightNodes, dimNonMatching, runLayout }
+  return { fitToView, highlightNodes, dimNonMatching, zoomToNodes, runLayout }
 }

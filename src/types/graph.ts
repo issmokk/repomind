@@ -22,6 +22,7 @@ export type GraphEdge = {
   targetType: string | null
   relationshipType: RelationshipType
   metadata: Record<string, unknown>
+  confidence: number | null
   createdAt: string
 }
 

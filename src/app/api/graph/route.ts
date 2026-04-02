@@ -7,7 +7,7 @@ const DEFAULT_LIMIT = 500
 const MAX_FETCH_LIMIT = 5000
 
 const VALID_SYMBOL_TYPES = new Set(['function', 'class', 'file', 'module', 'package', 'method', 'variable', 'interface', 'type', 'enum'])
-const VALID_RELATIONSHIP_TYPES = new Set(['calls', 'imports', 'inherits', 'composes', 'depends_on', 'external_dep'])
+const VALID_RELATIONSHIP_TYPES = new Set(['calls', 'imports', 'inherits', 'composes', 'depends_on', 'external_dep', 'gem_dependency', 'npm_dependency', 'event_publish', 'event_subscribe'])
 const SAFE_IDENTIFIER = /^[a-zA-Z0-9_.\-/:@<>]+$/
 
 export async function GET(request: NextRequest) {
@@ -21,6 +21,8 @@ export async function GET(request: NextRequest) {
   const relationshipTypes = params.get('relationshipTypes')?.split(',').filter(Boolean).filter((t) => VALID_RELATIONSHIP_TYPES.has(t))
   const nodeId = params.get('nodeId')
   const topConnected = params.get('topConnected') ? parseInt(params.get('topConnected')!, 10) : undefined
+  const includeCrossRepo = params.get('includeCrossRepo') === 'true'
+  const minConfidence = params.get('minConfidence') ? parseFloat(params.get('minConfidence')!) : undefined
   const rawLimit = params.get('limit') ? parseInt(params.get('limit')!, 10) : DEFAULT_LIMIT
   const limit = Math.min(Math.max(1, rawLimit), MAX_FETCH_LIMIT)
 
@@ -44,6 +46,12 @@ export async function GET(request: NextRequest) {
 
   if (relationshipTypes?.length) {
     query = query.in('relationship_type', relationshipTypes)
+  }
+
+  if (!includeCrossRepo) {
+    query = query.is('target_repo_id', null)
+  } else if (minConfidence !== undefined && !isNaN(minConfidence)) {
+    query = query.or(`target_repo_id.is.null,confidence.gte.${minConfidence}`)
   }
 
   if (nodeId) {
@@ -123,6 +131,7 @@ function snakeToCamel(row: Record<string, unknown>) {
     targetType: row.target_type,
     relationshipType: row.relationship_type,
     metadata: row.metadata,
+    confidence: row.confidence ?? null,
     createdAt: row.created_at,
   }
 }

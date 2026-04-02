@@ -6,6 +6,7 @@ vi.mock('@/hooks/use-graph-visualization', () => ({
     fitToView: vi.fn(),
     highlightNodes: vi.fn(),
     dimNonMatching: vi.fn(),
+    zoomToNodes: vi.fn(),
     runLayout: vi.fn(),
   }),
 }))

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { ControlsPanel } from '@/components/knowledge-graph/controls-panel'
 import { GraphCanvas } from '@/components/knowledge-graph/graph-canvas'
 import { TreeView } from '@/components/knowledge-graph/tree-view'
@@ -14,9 +14,25 @@ export default function KnowledgeGraphPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>('graph')
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [showCrossRepo, setShowCrossRepo] = useState(false)
+  const [confidenceThreshold, setConfidenceThreshold] = useState(0)
 
   const { repos } = useRepos()
-  const { edges, elements, isLoading, expandNode } = useGraphData(filters)
+
+  const combinedFilters = useMemo<GraphFilters>(() => ({
+    ...filters,
+    showCrossRepo,
+    confidenceThreshold: showCrossRepo ? confidenceThreshold : undefined,
+  }), [filters, showCrossRepo, confidenceThreshold])
+
+  const { edges, elements, isLoading, expandNode } = useGraphData(combinedFilters)
+
+  // Always enable the cross-repo toggle. The actual data check happens server-side;
+  // when the user enables cross-repo mode, the API fetches cross-repo edges.
+  // Without a separate probe endpoint, checking from the filtered edges creates
+  // a chicken-and-egg problem (toggle disabled because data not fetched, data not
+  // fetched because toggle disabled).
+  const hasCrossRepoData = repos.length > 1
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query)
@@ -37,6 +53,11 @@ export default function KnowledgeGraphPage() {
         filters={filters}
         onFilterChange={setFilters}
         onSearch={handleSearch}
+        showCrossRepo={showCrossRepo}
+        onShowCrossRepoChange={setShowCrossRepo}
+        confidenceThreshold={confidenceThreshold}
+        onConfidenceThresholdChange={setConfidenceThreshold}
+        hasCrossRepoData={hasCrossRepoData}
       />
       <div className="flex flex-1 flex-col">
         <div className="flex items-center justify-between border-b px-4 py-2">

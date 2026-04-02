@@ -13,6 +13,11 @@ const defaultProps: ControlsPanelProps = {
   filters: {},
   onFilterChange: vi.fn(),
   onSearch: vi.fn(),
+  showCrossRepo: false,
+  onShowCrossRepoChange: vi.fn(),
+  confidenceThreshold: 0,
+  onConfidenceThresholdChange: vi.fn(),
+  hasCrossRepoData: false,
 }
 
 beforeEach(() => {

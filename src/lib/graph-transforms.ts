@@ -146,6 +146,7 @@ export type NodeData = {
   symbolName: string
   symbolType: string | null
   filePath: string | null
+  repoPrefix: string | null
 }
 
 export type EdgeData = {
@@ -153,6 +154,8 @@ export type EdgeData = {
   source: string
   target: string
   relationshipType: string
+  isCrossRepo: boolean
+  confidence: number | null
 }
 
 export type GraphElements = {
@@ -165,11 +168,13 @@ function makeNodeId(file: string | null, symbol: string): string {
   return `${file}:${symbol}`
 }
 
-export function edgesToCytoscapeElements(edges: GraphEdge[]): GraphElements {
+export function edgesToCytoscapeElements(edges: GraphEdge[], repoNameMap?: Map<string, string>): GraphElements {
   const nodeMap = new Map<string, NodeData>()
   const edgeElements: Array<{ data: EdgeData }> = []
 
   for (const edge of edges) {
+    const crossRepo = edge.targetRepoId !== null && edge.targetRepoId !== edge.repoId
+
     const sourceId = makeNodeId(edge.sourceFile, edge.sourceSymbol)
     if (!nodeMap.has(sourceId)) {
       nodeMap.set(sourceId, {
@@ -177,16 +182,21 @@ export function edgesToCytoscapeElements(edges: GraphEdge[]): GraphElements {
         symbolName: edge.sourceSymbol,
         symbolType: edge.sourceType,
         filePath: edge.sourceFile,
+        repoPrefix: null,
       })
     }
 
     const targetId = makeNodeId(edge.targetFile, edge.targetSymbol)
     if (!nodeMap.has(targetId)) {
+      const repoPrefix = crossRepo && edge.targetRepoId
+        ? (repoNameMap?.get(edge.targetRepoId) ?? edge.targetRepoId)
+        : null
       nodeMap.set(targetId, {
         id: targetId,
         symbolName: edge.targetSymbol,
         symbolType: edge.targetType,
         filePath: edge.targetFile,
+        repoPrefix,
       })
     }
 
@@ -196,6 +206,8 @@ export function edgesToCytoscapeElements(edges: GraphEdge[]): GraphElements {
         source: sourceId,
         target: targetId,
         relationshipType: edge.relationshipType,
+        isCrossRepo: crossRepo,
+        confidence: edge.confidence ?? null,
       },
     })
   }
