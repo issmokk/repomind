@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
         defaultBranch: repo.defaultBranch,
         lastIndexedCommit: null,
         githubAuthType: 'github_app',
+        githubAppInstallationId: Number(installationId),
       })
       createdRepos.push(created)
     } catch {

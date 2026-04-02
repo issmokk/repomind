@@ -7,7 +7,7 @@ export type IndexingJobStatus =
   | 'failed'
   | 'partial'
 
-export type IndexingJobTrigger = 'manual' | 'git_diff'
+export type IndexingJobTrigger = 'manual' | 'git_diff' | 'webhook' | 'install'
 
 export type IndexingJob = {
   id: string

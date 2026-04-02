@@ -149,7 +149,7 @@ function createMockEmbedding(shouldFail = false) {
 const REPO: Repository = {
   id: 'repo-1', orgId: 'org-1', name: 'repo', fullName: 'owner/repo',
   url: 'https://github.com/owner/repo', defaultBranch: 'main',
-  lastIndexedCommit: null, githubAuthType: 'pat',
+  lastIndexedCommit: null, githubAuthType: 'pat', githubAppInstallationId: null,
   createdAt: '2026-01-01', updatedAt: '2026-01-01',
 }
 

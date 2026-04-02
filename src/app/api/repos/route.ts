@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
     defaultBranch: branch ?? metadata.defaultBranch,
     lastIndexedCommit: null,
     githubAuthType: authType,
+    githubAppInstallationId: null,
   })
 
   return NextResponse.json(repo)

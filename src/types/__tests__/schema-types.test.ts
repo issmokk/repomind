@@ -29,6 +29,7 @@ describe('Schema Types', () => {
         defaultBranch: 'main',
         lastIndexedCommit: null,
         githubAuthType: 'pat',
+        githubAppInstallationId: null,
         createdAt: '2026-01-01T00:00:00Z',
         updatedAt: '2026-01-01T00:00:00Z',
       }
@@ -117,6 +118,7 @@ describe('Schema Types', () => {
       const edge: GraphEdge = {
         id: 1,
         repoId: 'uuid-1',
+        targetRepoId: null,
         sourceFile: 'src/a.ts',
         sourceSymbol: 'foo',
         sourceType: 'function',
@@ -140,8 +142,8 @@ describe('Schema Types', () => {
     })
 
     it('trigger_type is constrained to enum values', () => {
-      const validTriggers: IndexingJobTrigger[] = ['manual', 'git_diff']
-      expect(validTriggers).toHaveLength(2)
+      const validTriggers: IndexingJobTrigger[] = ['manual', 'git_diff', 'webhook', 'install']
+      expect(validTriggers).toHaveLength(4)
     })
 
     it('has all required fields', () => {

@@ -39,7 +39,7 @@ describe('SupabaseStorageProvider', () => {
 
       const result = await provider.createRepository({
         orgId: 'org-1', name: 'repo', fullName: 'owner/repo', url: 'https://github.com/owner/repo',
-        defaultBranch: 'main', lastIndexedCommit: null, githubAuthType: 'pat',
+        defaultBranch: 'main', lastIndexedCommit: null, githubAuthType: 'pat', githubAppInstallationId: null,
       })
       expect(mockClient.from).toHaveBeenCalledWith('repositories')
       expect(result.fullName).toBe('owner/repo')
@@ -167,7 +167,7 @@ describe('SupabaseStorageProvider', () => {
       provider = new SupabaseStorageProvider(mockClient as never)
 
       await provider.upsertEdges([{
-        repoId: 'repo-1', sourceFile: 'a.ts', sourceSymbol: 'foo', sourceType: 'function',
+        repoId: 'repo-1', targetRepoId: null, sourceFile: 'a.ts', sourceSymbol: 'foo', sourceType: 'function',
         targetFile: 'b.ts', targetSymbol: 'bar', targetType: 'function',
         relationshipType: 'calls', metadata: {},
       }])

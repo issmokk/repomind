@@ -20,6 +20,7 @@ function makeRepo(overrides: Partial<RepoWithStatus> = {}): RepoWithStatus {
     defaultBranch: 'main',
     lastIndexedCommit: null,
     githubAuthType: 'pat',
+    githubAppInstallationId: null,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-06-01T12:00:00Z',
     latestJobStatus: null,
