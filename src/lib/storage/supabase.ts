@@ -278,6 +278,16 @@ export class SupabaseStorageProvider implements StorageProvider {
     assertNoError(result, 'deleteEdgesByRepo')
   }
 
+  async deleteCrossRepoEdges(repoIds: string[]): Promise<void> {
+    if (repoIds.length === 0) return
+    const result = await this.serviceClient
+      .from('graph_edges')
+      .delete()
+      .in('repo_id', repoIds)
+      .not('target_repo_id', 'is', null)
+    assertNoError(result, 'deleteCrossRepoEdges')
+  }
+
   async queryEdgesBySource(repoId: string, sourceFile: string, sourceSymbol: string): Promise<GraphEdge[]> {
     const result = await this.serviceClient
       .from('graph_edges')

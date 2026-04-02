@@ -42,6 +42,7 @@ export interface StorageProvider {
   upsertEdges(edges: GraphEdgeInsert[]): Promise<void>
   deleteEdgesByFile(repoId: string, filePath: string): Promise<void>
   deleteEdgesByRepo(repoId: string): Promise<void>
+  deleteCrossRepoEdges(repoIds: string[]): Promise<void>
   queryEdgesBySource(repoId: string, sourceFile: string, sourceSymbol: string): Promise<GraphEdge[]>
   queryEdgesByTarget(repoId: string, targetFile: string, targetSymbol: string): Promise<GraphEdge[]>
 
