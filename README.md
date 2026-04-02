@@ -182,3 +182,5 @@ npm run test:run
 ## Deployment
 
 Deploy to [Vercel](https://vercel.com). Set env vars in Vercel dashboard. Apply migration to remote Supabase before using API endpoints.
+
+Enable **Web Analytics** and **Speed Insights** in the Vercel project settings dashboard for production observability. No npm packages required.

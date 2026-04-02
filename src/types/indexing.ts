@@ -9,6 +9,17 @@ export type IndexingJobStatus =
 
 export type IndexingJobTrigger = 'manual' | 'git_diff' | 'webhook' | 'install'
 
+export type JobLogEntry = {
+  timestamp: string
+  level?: 'info' | 'warn' | 'error'
+  message?: string
+  file?: string
+  duration_ms?: number
+  step?: string
+  batch_number?: number
+  error?: string
+}
+
 export type IndexingJob = {
   id: string
   repoId: string
@@ -20,7 +31,7 @@ export type IndexingJob = {
   processedFiles: number
   failedFiles: number
   currentFile: string | null
-  errorLog: Array<{ error: string; file?: string; timestamp: string }>
+  errorLog: JobLogEntry[]
   lastHeartbeatAt: string | null
   startedAt: string | null
   completedAt: string | null
