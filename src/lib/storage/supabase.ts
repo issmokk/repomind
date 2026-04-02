@@ -116,6 +116,16 @@ export class SupabaseStorageProvider implements StorageProvider {
     return row ? toCamelCase<Repository>(row) : null
   }
 
+  async findRepositoryByFullName(fullName: string): Promise<Repository | null> {
+    const result = await this.serviceClient
+      .from('repositories')
+      .select('*')
+      .eq('full_name', fullName)
+      .maybeSingle()
+    const row = assertNoError(result, 'findRepositoryByFullName')
+    return row ? toCamelCase<Repository>(row) : null
+  }
+
   async deleteRepository(repoId: string): Promise<void> {
     const result = await this.serviceClient
       .from('repositories')

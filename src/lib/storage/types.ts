@@ -22,6 +22,7 @@ export interface StorageProvider {
   createRepository(data: NewRepository): Promise<Repository>
   getRepositories(userClient: SupabaseClient): Promise<Repository[]>
   getRepository(repoId: string, userClient?: SupabaseClient): Promise<Repository | null>
+  findRepositoryByFullName(fullName: string): Promise<Repository | null>
   deleteRepository(repoId: string): Promise<void>
   updateRepository(repoId: string, data: Partial<Repository>): Promise<Repository>
 
