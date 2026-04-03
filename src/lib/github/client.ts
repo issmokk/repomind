@@ -99,7 +99,10 @@ export class GitHubClient {
 
   private async request<T = unknown>(path: string): Promise<T> {
     const headers = await this.auth.getHeaders()
-    const response = await fetch(`${this.baseUrl}${path}`, { headers })
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      headers,
+      signal: AbortSignal.timeout(30_000),
+    })
 
     await this.checkRateLimit(response)
 

@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
       Authorization: `Bearer ${token}`,
       Accept: 'application/vnd.github+json',
     },
+    signal: AbortSignal.timeout(30_000),
   });
 
   if (ghRes.status === 401) {

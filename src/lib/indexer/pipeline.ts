@@ -172,12 +172,21 @@ export async function startIndexingJob(
     _headSha = headBranch
   }
 
-  const job = await storage.createJob({
-    repoId: repo.id,
-    triggerType: options.triggerType,
-    toCommit: headBranch,
-    fromCommit: repo.lastIndexedCommit,
-  })
+  let job: IndexingJob
+  try {
+    job = await storage.createJob({
+      repoId: repo.id,
+      triggerType: options.triggerType,
+      toCommit: headBranch,
+      fromCommit: repo.lastIndexedCommit,
+    })
+  } catch (err) {
+    const msg = (err as Error).message ?? ''
+    if (msg.includes('23505') || msg.includes('unique') || msg.includes('duplicate')) {
+      throw new PipelineError('Indexing already in progress for this repository', 409)
+    }
+    throw err
+  }
 
   let filesToProcess: FileToProcess[]
 

@@ -1,7 +1,15 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { z } from 'zod'
 import { getRepoContext } from '../../_helpers'
 
-const VALID_PROVIDERS = new Set(['ollama', 'openai', 'gemini'])
+const settingsUpdateSchema = z.object({
+  branchFilter: z.array(z.string().min(1)).min(1).optional(),
+  includePatterns: z.array(z.string()).optional(),
+  excludePatterns: z.array(z.string()).optional(),
+  embeddingProvider: z.enum(['ollama', 'openai', 'gemini']).optional(),
+  embeddingModel: z.string().min(1).max(100).optional(),
+  autoIndexOnAdd: z.boolean().optional(),
+}).strict()
 
 export async function GET(
   _request: NextRequest,
@@ -24,38 +32,21 @@ export async function PUT(
   const ctx = await getRepoContext(id)
   if (ctx instanceof NextResponse) return ctx
 
-  const body = await request.json()
-
-  if (body.branchFilter !== undefined) {
-    if (!Array.isArray(body.branchFilter) || body.branchFilter.length === 0) {
-      return NextResponse.json({ error: 'branchFilter must be a non-empty array' }, { status: 400 })
-    }
+  let rawBody: unknown
+  try {
+    rawBody = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  if (body.embeddingProvider !== undefined) {
-    if (!VALID_PROVIDERS.has(body.embeddingProvider)) {
-      return NextResponse.json({ error: `embeddingProvider must be one of: ${[...VALID_PROVIDERS].join(', ')}` }, { status: 400 })
-    }
+  const parsed = settingsUpdateSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid settings', details: parsed.error.flatten().fieldErrors },
+      { status: 400 }
+    )
   }
 
-  if (body.includePatterns !== undefined) {
-    if (!Array.isArray(body.includePatterns) || !body.includePatterns.every((p: unknown) => typeof p === 'string')) {
-      return NextResponse.json({ error: 'includePatterns must be an array of strings' }, { status: 400 })
-    }
-  }
-
-  if (body.excludePatterns !== undefined) {
-    if (!Array.isArray(body.excludePatterns) || !body.excludePatterns.every((p: unknown) => typeof p === 'string')) {
-      return NextResponse.json({ error: 'excludePatterns must be an array of strings' }, { status: 400 })
-    }
-  }
-
-  const allowedFields = ['branchFilter', 'includePatterns', 'excludePatterns', 'embeddingProvider', 'embeddingModel', 'autoIndexOnAdd']
-  const sanitized: Record<string, unknown> = {}
-  for (const key of allowedFields) {
-    if (body[key] !== undefined) sanitized[key] = body[key]
-  }
-
-  const updated = await ctx.storage.updateSettings(id, sanitized)
+  const updated = await ctx.storage.updateSettings(id, parsed.data)
   return NextResponse.json(updated)
 }

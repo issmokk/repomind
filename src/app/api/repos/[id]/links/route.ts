@@ -24,46 +24,54 @@ export async function GET(
     return NextResponse.json([])
   }
 
-  const { data: links, error: linkErr } = await ctx.supabase
-    .from('repo_links')
-    .select('*')
-    .in('id', linkIds)
+  const [linksResult, allMembershipsResult] = await Promise.all([
+    ctx.supabase.from('repo_links').select('*').in('id', linkIds),
+    ctx.supabase
+      .from('repo_link_memberships')
+      .select('id, link_id, repo_id, created_at')
+      .in('link_id', linkIds),
+  ])
 
-  if (linkErr) {
+  if (linksResult.error) {
     return NextResponse.json({ error: 'Failed to fetch link groups' }, { status: 500 })
   }
 
-  const result = await Promise.all(
-    (links ?? []).map(async (link: { id: string; org_id: string; name: string; created_at: string; updated_at: string }) => {
-      const { data: allMemberships } = await ctx.supabase
-        .from('repo_link_memberships')
-        .select('id, link_id, repo_id, created_at')
-        .eq('link_id', link.id)
+  const membershipsByLink = new Map<string, Array<{ id: string; link_id: string; repo_id: string; created_at: string }>>()
+  for (const m of allMembershipsResult.data ?? []) {
+    const list = membershipsByLink.get(m.link_id) ?? []
+    list.push(m)
+    membershipsByLink.set(m.link_id, list)
+  }
 
-      const repoIds = (allMemberships ?? []).map((m: { repo_id: string }) => m.repo_id)
-      let repos: Array<{ id: string; name: string; fullName: string }> = []
-      if (repoIds.length > 0) {
-        const repoResults = await Promise.all(
-          repoIds.map((rid: string) => ctx.storage.getRepository(rid, ctx.supabase))
-        )
-        repos = repoResults
-          .filter((r): r is NonNullable<typeof r> => r !== null)
-          .map(r => ({ id: r.id, name: r.name, fullName: r.fullName }))
-      }
+  const allRepoIds = [...new Set((allMembershipsResult.data ?? []).map((m: { repo_id: string }) => m.repo_id))]
+  const { data: repos } = allRepoIds.length > 0
+    ? await ctx.supabase
+        .from('repositories')
+        .select('id, name, full_name')
+        .in('id', allRepoIds)
+    : { data: [] as Array<{ id: string; name: string; full_name: string }> }
 
-      return {
-        id: link.id,
-        orgId: link.org_id,
-        name: link.name,
-        createdAt: link.created_at,
-        updatedAt: link.updated_at,
-        memberships: (allMemberships ?? []).map((m: { id: string; link_id: string; repo_id: string; created_at: string }) => ({
-          id: m.id, linkId: m.link_id, repoId: m.repo_id, createdAt: m.created_at,
-        })),
-        repos,
-      }
-    })
-  )
+  const repoMap = new Map((repos ?? []).map((r: { id: string; name: string; full_name: string }) => [r.id, r]))
+
+  const result = (linksResult.data ?? []).map((link: { id: string; org_id: string; name: string; created_at: string; updated_at: string }) => {
+    const linkMemberships = membershipsByLink.get(link.id) ?? []
+    const linkRepos = linkMemberships
+      .map(m => repoMap.get(m.repo_id))
+      .filter((r): r is NonNullable<typeof r> => r != null)
+      .map(r => ({ id: r.id, name: r.name, fullName: r.full_name }))
+
+    return {
+      id: link.id,
+      orgId: link.org_id,
+      name: link.name,
+      createdAt: link.created_at,
+      updatedAt: link.updated_at,
+      memberships: linkMemberships.map(m => ({
+        id: m.id, linkId: m.link_id, repoId: m.repo_id, createdAt: m.created_at,
+      })),
+      repos: linkRepos,
+    }
+  })
 
   return NextResponse.json(result)
 }

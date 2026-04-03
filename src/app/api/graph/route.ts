@@ -20,11 +20,13 @@ export async function GET(request: NextRequest) {
   const symbolTypes = params.get('symbolTypes')?.split(',').filter(Boolean).filter((t) => VALID_SYMBOL_TYPES.has(t))
   const relationshipTypes = params.get('relationshipTypes')?.split(',').filter(Boolean).filter((t) => VALID_RELATIONSHIP_TYPES.has(t))
   const nodeId = params.get('nodeId')
-  const topConnected = params.get('topConnected') ? parseInt(params.get('topConnected')!, 10) : undefined
+  const parsedTop = params.get('topConnected') ? parseInt(params.get('topConnected')!, 10) : undefined
+  const topConnected = parsedTop && Number.isFinite(parsedTop) ? Math.min(Math.max(1, parsedTop), 200) : undefined
   const includeCrossRepo = params.get('includeCrossRepo') === 'true'
-  const minConfidence = params.get('minConfidence') ? parseFloat(params.get('minConfidence')!) : undefined
-  const rawLimit = params.get('limit') ? parseInt(params.get('limit')!, 10) : DEFAULT_LIMIT
-  const limit = Math.min(Math.max(1, rawLimit), MAX_FETCH_LIMIT)
+  const parsedConfidence = params.get('minConfidence') ? parseFloat(params.get('minConfidence')!) : undefined
+  const minConfidence = parsedConfidence && Number.isFinite(parsedConfidence) ? parsedConfidence : undefined
+  const rawLimit = parseInt(params.get('limit') ?? '', 10)
+  const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(1, rawLimit), MAX_FETCH_LIMIT) : DEFAULT_LIMIT
 
   if (nodeId && !SAFE_IDENTIFIER.test(nodeId)) {
     return NextResponse.json({ error: 'Invalid nodeId format' }, { status: 400 })
@@ -37,11 +39,10 @@ export async function GET(request: NextRequest) {
   }
 
   if (symbolTypes?.length) {
-    query = query.or(
-      symbolTypes.map((t) => `source_type.eq.${t}`).join(',') +
-        ',' +
-        symbolTypes.map((t) => `target_type.eq.${t}`).join(','),
-    )
+    // Safe: symbolTypes are pre-filtered against VALID_SYMBOL_TYPES whitelist (line 17)
+    const sourceFilters = symbolTypes.map((t) => `source_type.eq.${t}`)
+    const targetFilters = symbolTypes.map((t) => `target_type.eq.${t}`)
+    query = query.or([...sourceFilters, ...targetFilters].join(','))
   }
 
   if (relationshipTypes?.length) {
@@ -55,6 +56,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (nodeId) {
+    // Safe: nodeId validated against SAFE_IDENTIFIER regex (no commas, no PostgREST operators)
     query = query.or(`source_symbol.eq.${nodeId},target_symbol.eq.${nodeId}`)
     const { data: edges, error } = await query.limit(limit)
     if (error) {

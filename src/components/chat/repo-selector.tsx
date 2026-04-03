@@ -46,6 +46,9 @@ export function RepoSelector({ repos, selectedIds, onSelectionChange }: Props) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label="Select repositories"
         className="flex items-center gap-1.5 flex-wrap rounded-lg border bg-background px-3 py-1.5 text-sm min-h-[36px] w-full"
       >
         {allSelected ? (
@@ -62,6 +65,8 @@ export function RepoSelector({ repos, selectedIds, onSelectionChange }: Props) {
                 {r.name}
                 <X
                   className="h-3 w-3 cursor-pointer"
+                  aria-label={`Remove ${r.name}`}
+                  role="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleRepo(r.id);
@@ -78,26 +83,31 @@ export function RepoSelector({ repos, selectedIds, onSelectionChange }: Props) {
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-lg border bg-popover shadow-md">
+        <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-lg border bg-popover shadow-md" role="listbox" aria-label="Repository list">
           <div className="p-2">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search repos..."
+              aria-label="Search repositories"
               className="w-full rounded-md border bg-background px-2 py-1 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
           </div>
           <div className="max-h-48 overflow-y-auto">
             <button
+              role="option"
+              aria-selected={allSelected}
               onClick={toggleAll}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent"
             >
-              <input type="checkbox" checked={allSelected} readOnly className="rounded" />
+              <input type="checkbox" checked={allSelected} readOnly tabIndex={-1} className="rounded" />
               <span className="font-medium">All repos</span>
             </button>
             {filtered.map((repo) => (
               <button
                 key={repo.id}
+                role="option"
+                aria-selected={selectedIds.includes(repo.id)}
                 onClick={() => toggleRepo(repo.id)}
                 className="flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-accent"
               >
@@ -105,6 +115,7 @@ export function RepoSelector({ repos, selectedIds, onSelectionChange }: Props) {
                   type="checkbox"
                   checked={selectedIds.includes(repo.id)}
                   readOnly
+                  tabIndex={-1}
                   className="rounded"
                 />
                 <span className="font-mono text-xs">{repo.fullName}</span>
