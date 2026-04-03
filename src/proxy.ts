@@ -29,7 +29,13 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  if (!user && pathname !== '/login' && !pathname.startsWith('/auth')) {
+  const isPublicRoute =
+    pathname === '/login' ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/api/inngest') ||
+    pathname.startsWith('/api/webhooks/');
+
+  if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
