@@ -50,7 +50,7 @@ export function TreeView({ edges, repoName, selectedNodeId, onSelect }: TreeView
     if (tree) {
       setExpandedIds(new Set([tree.id]))
     }
-  }, [tree?.id])
+  }, [tree])
 
   const flatItems = useMemo(() => {
     if (!tree) return []

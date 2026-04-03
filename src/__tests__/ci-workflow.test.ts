@@ -41,11 +41,11 @@ describe('CI workflow', () => {
     expect(runSteps.some((r) => r.includes('tsc --noEmit'))).toBe(true)
   })
 
-  it('test job runs npm run test:run', () => {
+  it('test job runs tests with coverage', () => {
     const jobs = workflow.jobs as Record<string, Record<string, unknown>>
     const steps = jobs['test'].steps as Array<Record<string, string>>
     const runSteps = steps.filter((s) => s.run).map((s) => s.run)
-    expect(runSteps.some((r) => r.includes('test:run'))).toBe(true)
+    expect(runSteps.some((r) => r.includes('test:coverage'))).toBe(true)
   })
 
   it('test job uploads coverage artifact', () => {
