@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { isMaskedValue } from '@/lib/crypto'
 
 type ProviderConfigProps = {
   provider: string
@@ -61,21 +62,31 @@ export function ProviderConfig({ provider, config, onChange, dirtyFields }: Prov
   return (
     <div className="space-y-3" data-testid={`provider-config-${provider}`}>
       <h3 className="text-sm font-medium capitalize">{provider}</h3>
-      {fields.map((field) => (
-        <div key={field.key} className="space-y-1">
-          <Label className="text-xs">{field.label}</Label>
-          <Input
-            type={field.type}
-            value={config[field.key] ?? ''}
-            onChange={(e) => onChange(field.key, e.target.value)}
-            placeholder={field.placeholder}
-            data-testid={`input-${field.key}`}
-          />
-          {dirtyFields.has(field.key) && (
-            <span className="text-xs text-muted-foreground">Modified</span>
-          )}
-        </div>
-      ))}
+      {fields.map((field) => {
+        const value = config[field.key] ?? ''
+        const isApiKey = field.type === 'password'
+        const hasSavedKey = isApiKey && isMaskedValue(value) && !dirtyFields.has(field.key)
+        return (
+          <div key={field.key} className="space-y-1">
+            <Label className="text-xs">{field.label}</Label>
+            <Input
+              type={field.type}
+              value={config[field.key] ?? ''}
+              onChange={(e) => onChange(field.key, e.target.value)}
+              placeholder={hasSavedKey ? 'Key saved (enter new value to replace)' : field.placeholder}
+              data-testid={`input-${field.key}`}
+            />
+            {hasSavedKey && (
+              <span className="flex items-center gap-1 text-xs text-green-600">
+                <CheckCircle2 className="h-3 w-3" /> Key saved securely
+              </span>
+            )}
+            {dirtyFields.has(field.key) && (
+              <span className="text-xs text-muted-foreground">Modified</span>
+            )}
+          </div>
+        )
+      })}
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={testConnection} disabled={testResult === 'loading'}>
           {testResult === 'loading' && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}

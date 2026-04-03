@@ -15,7 +15,6 @@ describe('ProviderChain', () => {
         providerOrder={['claude', 'openai', 'ollama']}
         providers={providers}
         onReorder={vi.fn()}
-        onConfigure={vi.fn()}
       />,
     )
     const items = screen.getAllByRole('listitem')
@@ -32,7 +31,6 @@ describe('ProviderChain', () => {
         providerOrder={['claude', 'openai', 'ollama']}
         providers={providers}
         onReorder={onReorder}
-        onConfigure={vi.fn()}
       />,
     )
     expect(container.querySelectorAll('[role="listitem"]')).toHaveLength(3)
@@ -44,7 +42,6 @@ describe('ProviderChain', () => {
         providerOrder={['claude']}
         providers={[{ name: 'claude', configured: true }]}
         onReorder={vi.fn()}
-        onConfigure={vi.fn()}
       />,
     )
     expect(screen.getByText('Configured')).toBeDefined()
@@ -56,7 +53,6 @@ describe('ProviderChain', () => {
         providerOrder={['openai']}
         providers={[{ name: 'openai', configured: false }]}
         onReorder={vi.fn()}
-        onConfigure={vi.fn()}
       />,
     )
     expect(screen.getByText('Not configured')).toBeDefined()
