@@ -15,6 +15,7 @@ function makeEdge(overrides: Partial<GraphEdge> = {}): GraphEdge {
     targetType: 'function',
     relationshipType: 'calls',
     metadata: {},
+    confidence: null,
     createdAt: '2025-01-01T00:00:00Z',
     ...overrides,
   }

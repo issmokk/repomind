@@ -127,6 +127,7 @@ describe('Schema Types', () => {
         targetType: 'function',
         relationshipType: 'calls',
         metadata: {},
+        confidence: null,
         createdAt: '2026-01-01T00:00:00Z',
       }
       expect(validTypes).toContain(edge.relationshipType)

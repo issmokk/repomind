@@ -1,12 +1,13 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { CrossRepoEdge } from '@/lib/cross-repo/types'
 
 const mockFrom = vi.fn()
 const mockSupabase = {
   auth: {
     getUser: vi.fn(async () => ({
-      data: { user: { id: 'user-1', app_metadata: { org_id: 'org-1' } } },
-      error: null,
+      data: { user: { id: 'user-1', app_metadata: { org_id: 'org-1' } } as { id: string; app_metadata: { org_id: string } } | null },
+      error: null as { message: string } | null,
     })),
   },
   from: mockFrom,
@@ -40,7 +41,7 @@ const mockStorage = {
 }
 
 const mockRegistry = {
-  runAll: vi.fn(async () => []),
+  runAll: vi.fn(async (): Promise<CrossRepoEdge[]> => []),
 }
 
 function setupSupabaseChain(data: unknown, error: unknown = null) {
@@ -76,7 +77,7 @@ const repo3Unindexed = {
   githubAppInstallationId: null, createdAt: '2024-01-01', updatedAt: '2024-01-01',
 }
 
-const repoMap: Record<string, typeof repo1> = {
+const repoMap: Record<string, typeof repo1 | typeof repo3Unindexed> = {
   'repo-1': repo1,
   'repo-2': repo2,
   'repo-3': repo3Unindexed,
@@ -160,7 +161,7 @@ describe('POST /api/links/[linkId]/analyze', () => {
     const { POST } = await import('./route')
     await POST(makeRequest(), { params: Promise.resolve({ linkId: 'link-1' }) })
 
-    const insertedEdges = mockStorage.upsertEdges.mock.calls[0][0]
+    const insertedEdges = (mockStorage.upsertEdges as ReturnType<typeof vi.fn>).mock.calls[0]![0] as { targetRepoId: string }[]
     expect(insertedEdges[0].targetRepoId).toBe('repo-2')
     expect(insertedEdges[0].targetRepoId).not.toBeNull()
   })
@@ -188,7 +189,7 @@ describe('POST /api/links/[linkId]/analyze', () => {
     const data = await res.json()
 
     expect(data.skippedRepos).toContain('repo-3')
-    const analyzedRepos = mockRegistry.runAll.mock.calls[0][0]
+    const analyzedRepos = (mockRegistry.runAll as ReturnType<typeof vi.fn>).mock.calls[0]![0] as { id: string }[]
     expect(analyzedRepos).toHaveLength(2)
     expect(analyzedRepos.map((r: { id: string }) => r.id)).not.toContain('repo-3')
   })

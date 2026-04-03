@@ -10,8 +10,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "setup": "tsx scripts/download-grammars.ts",
+    "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "test:run": "vitest run",
+    "test:run": "tsc --noEmit && vitest run",
     "test:coverage": "vitest run --coverage",
     "eval": "vitest run --config vitest.eval.config.ts"
   },

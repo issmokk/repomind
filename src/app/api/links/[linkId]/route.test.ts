@@ -5,8 +5,8 @@ const mockFrom = vi.fn()
 const mockSupabase = {
   auth: {
     getUser: vi.fn(async () => ({
-      data: { user: { id: 'user-1', app_metadata: { org_id: 'org-1' } } },
-      error: null,
+      data: { user: { id: 'user-1', app_metadata: { org_id: 'org-1' } } as { id: string; app_metadata: { org_id: string } } | null },
+      error: null as { message: string } | null,
     })),
   },
   from: mockFrom,

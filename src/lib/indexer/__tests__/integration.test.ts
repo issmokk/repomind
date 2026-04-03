@@ -318,7 +318,7 @@ describe('Integration: Full Indexing Pipeline', () => {
       expect(result!.status).toBe('failed')
       expect(storage.markJobStale).toHaveBeenCalled()
       const jobRecord = storage._state.jobs['stale-job']
-      expect(jobRecord.errorLog.some((e) => e.error.includes('stale'))).toBe(true)
+      expect(jobRecord.errorLog.some((e) => (e as unknown as Record<string, string>).error?.includes('stale'))).toBe(true)
     })
 
     it('allows new job after stale job is cleared', async () => {

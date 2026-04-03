@@ -16,11 +16,11 @@ import type { GraphElements } from '@/lib/graph-transforms'
 
 const sampleElements: GraphElements = {
   nodes: [
-    { data: { id: 'a.ts:funcA', symbolName: 'funcA', symbolType: 'function', filePath: 'a.ts' } },
-    { data: { id: 'b.ts:funcB', symbolName: 'funcB', symbolType: 'function', filePath: 'b.ts' } },
+    { data: { id: 'a.ts:funcA', symbolName: 'funcA', symbolType: 'function', filePath: 'a.ts', repoPrefix: null } },
+    { data: { id: 'b.ts:funcB', symbolName: 'funcB', symbolType: 'function', filePath: 'b.ts', repoPrefix: null } },
   ],
   edges: [
-    { data: { id: '1', source: 'a.ts:funcA', target: 'b.ts:funcB', relationshipType: 'calls' } },
+    { data: { id: '1', source: 'a.ts:funcA', target: 'b.ts:funcB', relationshipType: 'calls', isCrossRepo: false, confidence: null } },
   ],
 }
 
