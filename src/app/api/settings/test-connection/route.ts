@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server'
 import { getAuthContext } from '@/app/api/repos/_helpers'
+import { isMaskedValue } from '@/lib/crypto'
+import type { TeamSettings } from '@/types/settings'
 
 export const runtime = 'nodejs'
+
+const API_KEY_MAP: Record<string, keyof TeamSettings> = {
+  claudeApiKey: 'claudeApiKey',
+  openaiApiKey: 'openaiApiKey',
+  geminiApiKey: 'geminiApiKey',
+  cohereApiKey: 'cohereApiKey',
+}
 
 const BLOCKED_HOSTS = /^(localhost|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.|0\.|\[::1\]|\[fe80:)/i
 
@@ -26,6 +35,19 @@ export async function POST(req: Request) {
   }
 
   const { provider, config } = body
+
+  const hasMaskedKeys = Object.entries(API_KEY_MAP).some(
+    ([field]) => typeof config[field] === 'string' && isMaskedValue(config[field]),
+  )
+  if (hasMaskedKeys) {
+    const decryptedSettings = await auth.storage.getTeamSettingsDecrypted(auth.orgId)
+    for (const [field, settingsKey] of Object.entries(API_KEY_MAP)) {
+      if (typeof config[field] === 'string' && isMaskedValue(config[field])) {
+        const realValue = decryptedSettings[settingsKey]
+        config[field] = typeof realValue === 'string' ? realValue : ''
+      }
+    }
+  }
 
   try {
     switch (provider) {

@@ -20,12 +20,6 @@ import type { HybridSearchResult, NewChatMessage, ChatMessage, NewQueryFeedback 
 import type { StorageProvider } from './types'
 import { decrypt } from '@/lib/crypto'
 
-function maskApiKey(key: string | null): string | null {
-  if (!key) return null
-  if (key.length <= 4) return '****'
-  return '****' + key.slice(-4)
-}
-
 const DEFAULT_TEAM_SETTINGS: Omit<TeamSettings, 'id' | 'orgId' | 'teamId' | 'createdAt' | 'updatedAt'> = {
   embeddingProvider: 'ollama' as const,
   ollamaBaseUrl: 'http://localhost:11434',
@@ -592,10 +586,6 @@ export class SupabaseStorageProvider implements StorageProvider {
 
     const settings = toCamelCase<TeamSettings>(data)
     settings.teamId = settings.orgId
-    settings.claudeApiKey = maskApiKey(settings.claudeApiKey)
-    settings.openaiApiKey = maskApiKey(settings.openaiApiKey)
-    settings.cohereApiKey = maskApiKey(settings.cohereApiKey)
-    settings.geminiApiKey = maskApiKey(settings.geminiApiKey)
     return settings
   }
 
@@ -651,10 +641,6 @@ export class SupabaseStorageProvider implements StorageProvider {
     const row = assertNoError(result, 'updateTeamSettings')
     const settings = toCamelCase<TeamSettings>(row)
     settings.teamId = settings.orgId
-    settings.claudeApiKey = maskApiKey(settings.claudeApiKey)
-    settings.openaiApiKey = maskApiKey(settings.openaiApiKey)
-    settings.cohereApiKey = maskApiKey(settings.cohereApiKey)
-    settings.geminiApiKey = maskApiKey(settings.geminiApiKey)
     return settings
   }
 }
