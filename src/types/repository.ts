@@ -1,5 +1,7 @@
 export type GitHubAuthType = 'pat' | 'github_app'
 
+export type IndexingMethod = 'manual' | 'webhook' | 'git_diff' | 'cron'
+
 export type Repository = {
   id: string
   orgId: string
@@ -24,6 +26,7 @@ export type RepositorySettings = {
   excludePatterns: string[]
   embeddingProvider: string
   embeddingModel: string
+  indexingMethod: IndexingMethod
   autoIndexOnAdd: boolean
   createdAt: string
   updatedAt: string

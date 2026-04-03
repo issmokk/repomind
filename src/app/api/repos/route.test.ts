@@ -56,7 +56,7 @@ const mockStorage = {
   updateJobStatus: vi.fn(async () => {}),
   getSettings: vi.fn(async () => ({
     id: 's-1', repoId: 'repo-1', branchFilter: ['main'], includePatterns: [], excludePatterns: [],
-    embeddingProvider: 'ollama', embeddingModel: 'gte-qwen2-1.5b-instruct', autoIndexOnAdd: false,
+    embeddingProvider: 'ollama', embeddingModel: 'gte-qwen2-1.5b-instruct', indexingMethod: 'manual', autoIndexOnAdd: false,
   })),
   updateSettings: vi.fn(async (_id: string, data: Record<string, unknown>) => ({ id: 's-1', ...data })),
   createDefaultSettings: vi.fn(async () => ({})),

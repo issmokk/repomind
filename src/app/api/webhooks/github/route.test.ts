@@ -12,10 +12,12 @@ vi.mock('@/lib/inngest/client', () => ({
 
 const mockFindRepo = vi.fn()
 const mockCreateJob = vi.fn()
+const mockGetSettingsInternal = vi.fn()
 vi.mock('@/lib/storage/supabase', () => ({
   SupabaseStorageProvider: class {
     findRepositoryByFullName = mockFindRepo
     createJob = mockCreateJob
+    getSettingsInternal = mockGetSettingsInternal
   },
 }))
 
@@ -59,6 +61,7 @@ describe('POST /api/webhooks/github', () => {
       lastIndexedCommit: 'prev123',
     })
     mockCreateJob.mockResolvedValue({ id: 'job-1', status: 'pending' })
+    mockGetSettingsInternal.mockResolvedValue({ indexingMethod: 'webhook' })
     mockSend.mockResolvedValue(undefined)
   })
 
@@ -132,6 +135,25 @@ describe('POST /api/webhooks/github', () => {
         }),
       }),
     )
+  })
+
+  it('skips repos with manual indexing method', async () => {
+    mockGetSettingsInternal.mockResolvedValue({ indexingMethod: 'manual' })
+    const body = makePushPayload()
+    const { POST } = await import('./route')
+    const res = await POST(makeRequest(body, { 'x-hub-signature-256': sign(body) }))
+    const data = await res.json()
+    expect(data.skipped).toBe('indexing method is manual, not webhook/git_diff')
+    expect(mockSend).not.toHaveBeenCalled()
+  })
+
+  it('processes repos with git_diff indexing method', async () => {
+    mockGetSettingsInternal.mockResolvedValue({ indexingMethod: 'git_diff' })
+    const body = makePushPayload()
+    const { POST } = await import('./route')
+    const res = await POST(makeRequest(body, { 'x-hub-signature-256': sign(body) }))
+    expect(res.status).toBe(200)
+    expect(mockSend).toHaveBeenCalled()
   })
 
   it('skips duplicate commit SHA', async () => {

@@ -28,6 +28,7 @@ export interface StorageProvider {
 
   createDefaultSettings(repoId: string): Promise<RepositorySettings>
   getSettings(repoId: string, userClient: SupabaseClient): Promise<RepositorySettings | null>
+  getSettingsInternal(repoId: string): Promise<RepositorySettings | null>
   updateSettings(repoId: string, data: RepositorySettingsUpdate): Promise<RepositorySettings>
 
   getCachedFile(repoId: string, filePath: string): Promise<CachedFile | null>
