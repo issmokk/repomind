@@ -257,7 +257,7 @@ describe('PUT /api/repos/:id/settings', () => {
     )
     expect(res.status).toBe(400)
     const data = await res.json()
-    expect(data.error).toMatch(/includePatterns/)
+    expect(data.details).toHaveProperty('includePatterns')
   })
 
   it('validates excludePatterns is array of strings', async () => {
@@ -268,15 +268,15 @@ describe('PUT /api/repos/:id/settings', () => {
     )
     expect(res.status).toBe(400)
     const data = await res.json()
-    expect(data.error).toMatch(/excludePatterns/)
+    expect(data.details).toHaveProperty('excludePatterns')
   })
 
-  it('strips unknown fields from update', async () => {
+  it('rejects unknown fields', async () => {
     const { PUT } = await import('./[id]/settings/route')
-    await PUT(
+    const res = await PUT(
       makeRequest('PUT', { branchFilter: ['main'], hackerField: 'drop me' }),
       { params: Promise.resolve({ id: 'repo-1' }) },
     )
-    expect(mockStorage.updateSettings).toHaveBeenCalledWith('repo-1', { branchFilter: ['main'] })
+    expect(res.status).toBe(400)
   })
 })
