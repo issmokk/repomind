@@ -31,13 +31,13 @@ const mockRepos: RepoWithStatus[] = [
   {
     id: '1', orgId: 'org1', name: 'repo1', fullName: 'owner/repo1',
     url: 'https://github.com/owner/repo1', defaultBranch: 'main',
-    lastIndexedCommit: null, githubAuthType: 'pat',
+    lastIndexedCommit: null, githubAuthType: 'pat', githubAppInstallationId: null,
     createdAt: '2024-01-01', updatedAt: '2024-01-01', latestJobStatus: 'completed',
   },
   {
     id: '2', orgId: 'org1', name: 'repo2', fullName: 'owner/repo2',
     url: 'https://github.com/owner/repo2', defaultBranch: 'main',
-    lastIndexedCommit: null, githubAuthType: 'pat',
+    lastIndexedCommit: null, githubAuthType: 'pat', githubAppInstallationId: null,
     createdAt: '2024-01-01', updatedAt: '2024-01-01', latestJobStatus: null,
   },
 ];

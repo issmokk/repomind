@@ -22,6 +22,7 @@ export interface StorageProvider {
   createRepository(data: NewRepository): Promise<Repository>
   getRepositories(userClient: SupabaseClient): Promise<Repository[]>
   getRepository(repoId: string, userClient?: SupabaseClient): Promise<Repository | null>
+  findRepositoryByFullName(fullName: string): Promise<Repository | null>
   deleteRepository(repoId: string): Promise<void>
   updateRepository(repoId: string, data: Partial<Repository>): Promise<Repository>
 
@@ -30,6 +31,7 @@ export interface StorageProvider {
   updateSettings(repoId: string, data: RepositorySettingsUpdate): Promise<RepositorySettings>
 
   getCachedFile(repoId: string, filePath: string): Promise<CachedFile | null>
+  listCachedFilePaths(repoId: string, extension?: string): Promise<string[]>
   setCachedFile(repoId: string, file: CachedFileUpsert): Promise<void>
   bulkSetCachedFiles(repoId: string, files: CachedFileUpsert[]): Promise<void>
   bulkInvalidateCache(repoId: string): Promise<void>
@@ -41,6 +43,7 @@ export interface StorageProvider {
   upsertEdges(edges: GraphEdgeInsert[]): Promise<void>
   deleteEdgesByFile(repoId: string, filePath: string): Promise<void>
   deleteEdgesByRepo(repoId: string): Promise<void>
+  deleteCrossRepoEdges(repoIds: string[]): Promise<void>
   queryEdgesBySource(repoId: string, sourceFile: string, sourceSymbol: string): Promise<GraphEdge[]>
   queryEdgesByTarget(repoId: string, targetFile: string, targetSymbol: string): Promise<GraphEdge[]>
 

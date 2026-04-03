@@ -9,11 +9,14 @@ const NODE_TYPES = [
 ]
 
 const EDGE_TYPES = [
-  { label: 'Calls', style: 'border-solid' },
-  { label: 'Imports', style: 'border-dashed' },
-  { label: 'Inherits', style: 'border-dotted' },
-  { label: 'Composes', style: 'border-solid border-2' },
-  { label: 'Depends on', style: 'border-solid opacity-50' },
+  { label: 'Calls', style: 'border-solid', color: undefined },
+  { label: 'Imports', style: 'border-dashed', color: undefined },
+  { label: 'Inherits', style: 'border-dotted', color: undefined },
+  { label: 'Composes', style: 'border-solid border-2', color: undefined },
+  { label: 'Depends on', style: 'border-solid opacity-50', color: undefined },
+  { label: 'Gem dep', style: 'border-dashed', color: '#f97316' },
+  { label: 'npm dep', style: 'border-dashed', color: '#22c55e' },
+  { label: 'Event flow', style: 'border-dashed', color: '#a855f7' },
 ]
 
 export function GraphLegend() {
@@ -38,7 +41,10 @@ export function GraphLegend() {
         <div className="space-y-1">
           {EDGE_TYPES.map((t) => (
             <div key={t.label} className="flex items-center gap-2">
-              <span className={`inline-block h-0 w-4 border-t border-muted-foreground ${t.style}`} />
+              <span
+                className={`inline-block h-0 w-4 border-t ${t.color ? '' : 'border-muted-foreground'} ${t.style}`}
+                style={t.color ? { borderColor: t.color } : undefined}
+              />
               <span className="text-xs text-muted-foreground">{t.label}</span>
             </div>
           ))}

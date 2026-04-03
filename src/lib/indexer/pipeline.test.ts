@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi } from 'vitest'
-import { startIndexingJob, processNextBatch, checkAndMarkStaleJob, PipelineError } from './pipeline'
+import { startIndexingJob, processNextBatch, checkAndMarkStaleJob, processBatchOfFiles, getAdaptiveBatchSize, PipelineError } from './pipeline'
 import type { Repository } from '@/types/repository'
 import type { IndexingJob, FileToProcess } from '@/types/indexing'
 
@@ -91,7 +91,7 @@ function mockEmbed() {
 const REPO: Repository = {
   id: 'repo-1', orgId: 'org-1', name: 'repo', fullName: 'owner/repo',
   url: 'https://github.com/owner/repo', defaultBranch: 'main',
-  lastIndexedCommit: null, githubAuthType: 'pat',
+  lastIndexedCommit: null, githubAuthType: 'pat', githubAppInstallationId: null,
   createdAt: '2026-01-01', updatedAt: '2026-01-01',
 }
 
@@ -235,5 +235,68 @@ describe('checkAndMarkStaleJob', () => {
     const storage = mockStorage({ getActiveJob: fn(async () => fresh) })
     const result = await checkAndMarkStaleJob('repo-1', storage)
     expect(result!.status).toBe('processing')
+  })
+})
+
+describe('processBatchOfFiles', () => {
+  const context = {
+    owner: 'owner',
+    repoName: 'repo',
+    defaultBranch: 'main',
+    fileTree: ['src/a.ts', 'src/b.ts'],
+  }
+
+  it('processes added files and returns counts', async () => {
+    const files: FileToProcess[] = [
+      { path: 'src/a.ts', sha: 'sha1', status: 'added' },
+    ]
+    const storage = mockStorage()
+    const result = await processBatchOfFiles(files, 'repo-1', storage, mockGitHub(), mockCache(), mockEmbed(), context)
+    expect(result.processed).toBe(1)
+    expect(result.failed).toBe(0)
+    expect(result.errors).toHaveLength(0)
+  })
+
+  it('handles removed files by deleting chunks and edges', async () => {
+    const files: FileToProcess[] = [
+      { path: 'src/deleted.ts', sha: '', status: 'removed' },
+    ]
+    const storage = mockStorage()
+    const result = await processBatchOfFiles(files, 'repo-1', storage, mockGitHub(), mockCache(), mockEmbed(), context)
+    expect(result.processed).toBe(1)
+    expect((storage as Record<string, ReturnType<typeof fn>>).deleteChunksByFile).toHaveBeenCalledWith('repo-1', 'src/deleted.ts')
+    expect((storage as Record<string, ReturnType<typeof fn>>).deleteEdgesByFile).toHaveBeenCalledWith('repo-1', 'src/deleted.ts')
+  })
+
+  it('captures errors per file without stopping the batch', async () => {
+    const cache = mockCache()
+    ;(cache as Record<string, ReturnType<typeof fn>>).fetchOrCacheFile
+      .mockResolvedValueOnce({ content: 'ok', sha: 'a', size: 10, encoding: 'utf-8' })
+      .mockRejectedValueOnce(new Error('fetch failed'))
+
+    const files: FileToProcess[] = [
+      { path: 'src/good.ts', sha: 'a', status: 'added' },
+      { path: 'src/bad.ts', sha: 'b', status: 'added' },
+    ]
+    const result = await processBatchOfFiles(files, 'repo-1', mockStorage(), mockGitHub(), cache, mockEmbed(), context)
+    expect(result.processed).toBe(1)
+    expect(result.failed).toBe(1)
+    expect(result.errors[0].file).toBe('src/bad.ts')
+  })
+})
+
+describe('getAdaptiveBatchSize', () => {
+  it('returns 5 for <= 500 files', () => {
+    expect(getAdaptiveBatchSize(1)).toBe(5)
+    expect(getAdaptiveBatchSize(500)).toBe(5)
+  })
+
+  it('returns 10 for 501-1000 files', () => {
+    expect(getAdaptiveBatchSize(501)).toBe(10)
+    expect(getAdaptiveBatchSize(1000)).toBe(10)
+  })
+
+  it('returns 20 for > 1000 files', () => {
+    expect(getAdaptiveBatchSize(1001)).toBe(20)
   })
 })

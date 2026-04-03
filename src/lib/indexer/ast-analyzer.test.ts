@@ -2,16 +2,22 @@
 import { describe, it, expect } from 'vitest'
 import { extractSymbols, extractImports, extractCallSites, extractInheritance, detectLanguage } from './ast-analyzer'
 
+interface MockNode {
+  [key: string]: unknown;
+  type: string; text: string; startPosition: { row: number; column: number };
+  endPosition: { row: number; column: number }; children: MockNode[]; childCount: number; parent: MockNode | null;
+}
+
 function makeNode(
-  type: string, text: string, children: ReturnType<typeof makeNode>[] = [],
-  startRow = 0, endRow = 0, parent: ReturnType<typeof makeNode> | null = null,
-): ReturnType<typeof makeNode> {
+  type: string, text: string, children: MockNode[] = [],
+  startRow = 0, endRow = 0, parent: MockNode | null = null,
+): MockNode {
   const node: Record<string, unknown> = {
     type, text, startPosition: { row: startRow, column: 0 },
     endPosition: { row: endRow, column: 0 }, children, childCount: children.length, parent,
   }
   children.forEach((c) => { (c as Record<string, unknown>).parent = node })
-  return node as never
+  return node as MockNode
 }
 
 function makeTree(rootNode: ReturnType<typeof makeNode>) { return { rootNode } as never }

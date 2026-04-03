@@ -4,10 +4,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const mockSelect = vi.fn()
 const mockIn = vi.fn()
 const mockOr = vi.fn()
+const mockIs = vi.fn()
 const mockLimit = vi.fn()
 
 function chainable() {
-  return { select: mockSelect, in: mockIn, or: mockOr, limit: mockLimit }
+  return { select: mockSelect, in: mockIn, or: mockOr, is: mockIs, limit: mockLimit }
 }
 
 const mockFrom = vi.fn(() => chainable())
@@ -50,6 +51,7 @@ beforeEach(() => {
   mockSelect.mockReturnValue(chainable())
   mockIn.mockReturnValue(chainable())
   mockOr.mockReturnValue(chainable())
+  mockIs.mockReturnValue(chainable())
   mockLimit.mockResolvedValue({ data: sampleEdges, error: null })
 })
 

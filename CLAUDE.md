@@ -67,7 +67,8 @@ Quality and accuracy over speed. Do not rush. Patches and debt accumulate fast w
 
 ```
 npm run dev          # Start dev server
-npm run test:run     # Run tests (single run)
+npm run typecheck    # TypeScript strict check (tsc --noEmit)
+npm run test:run     # Typecheck + tests (single run)
 npm run eval         # Run RAG evaluation harness (separate from tests)
 npm run setup        # Download tree-sitter grammar WASM files
 npm run lint         # ESLint

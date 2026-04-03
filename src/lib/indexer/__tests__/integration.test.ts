@@ -149,7 +149,7 @@ function createMockEmbedding(shouldFail = false) {
 const REPO: Repository = {
   id: 'repo-1', orgId: 'org-1', name: 'repo', fullName: 'owner/repo',
   url: 'https://github.com/owner/repo', defaultBranch: 'main',
-  lastIndexedCommit: null, githubAuthType: 'pat',
+  lastIndexedCommit: null, githubAuthType: 'pat', githubAppInstallationId: null,
   createdAt: '2026-01-01', updatedAt: '2026-01-01',
 }
 
@@ -318,7 +318,7 @@ describe('Integration: Full Indexing Pipeline', () => {
       expect(result!.status).toBe('failed')
       expect(storage.markJobStale).toHaveBeenCalled()
       const jobRecord = storage._state.jobs['stale-job']
-      expect(jobRecord.errorLog.some((e) => e.error.includes('stale'))).toBe(true)
+      expect(jobRecord.errorLog.some((e) => (e as unknown as Record<string, string>).error?.includes('stale'))).toBe(true)
     })
 
     it('allows new job after stale job is cleared', async () => {

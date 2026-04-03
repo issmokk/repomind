@@ -6,6 +6,7 @@ function makeEdge(overrides: Partial<GraphEdge> = {}): GraphEdge {
   return {
     id: 1,
     repoId: 'repo-1',
+    targetRepoId: null,
     sourceFile: 'src/a.ts',
     sourceSymbol: 'funcA',
     sourceType: 'function',
@@ -14,6 +15,7 @@ function makeEdge(overrides: Partial<GraphEdge> = {}): GraphEdge {
     targetType: 'function',
     relationshipType: 'calls',
     metadata: {},
+    confidence: null,
     createdAt: '2025-01-01T00:00:00Z',
     ...overrides,
   }

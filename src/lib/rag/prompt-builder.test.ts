@@ -112,10 +112,10 @@ describe('buildContextWindow', () => {
       chunks: [makeChunk()],
       graphContext: [{
         edge: {
-          id: 1, repoId: 'repo-1', sourceFile: 'a.ts', sourceSymbol: 'foo',
+          id: 1, repoId: 'repo-1', targetRepoId: null, sourceFile: 'a.ts', sourceSymbol: 'foo',
           sourceType: 'function', targetFile: 'b.ts', targetSymbol: 'bar',
           targetType: 'function', relationshipType: 'calls' as const,
-          metadata: {}, createdAt: '',
+          metadata: {}, confidence: null, createdAt: '',
         },
         hop: 1,
         sourceSymbol: 'a.ts:foo',
@@ -134,10 +134,10 @@ describe('buildContextWindow', () => {
       chunks: [makeChunk()],
       graphContext: [{
         edge: {
-          id: 1, repoId: 'repo-1', sourceFile: 'a.ts', sourceSymbol: 'foo',
+          id: 1, repoId: 'repo-1', targetRepoId: null, sourceFile: 'a.ts', sourceSymbol: 'foo',
           sourceType: 'function', targetFile: 'b.ts', targetSymbol: 'bar',
           targetType: 'function', relationshipType: 'calls' as const,
-          metadata: {}, createdAt: '',
+          metadata: {}, confidence: null, createdAt: '',
         },
         hop: 1,
         sourceSymbol: 'a.ts:foo',
@@ -160,10 +160,10 @@ describe('buildContextWindow', () => {
       chunks,
       graphContext: [{
         edge: {
-          id: 1, repoId: 'repo-1', sourceFile: 'a.ts', sourceSymbol: 'foo',
+          id: 1, repoId: 'repo-1', targetRepoId: null, sourceFile: 'a.ts', sourceSymbol: 'foo',
           sourceType: 'function', targetFile: 'b.ts', targetSymbol: 'bar',
           targetType: 'function', relationshipType: 'calls' as const,
-          metadata: {}, createdAt: '',
+          metadata: {}, confidence: null, createdAt: '',
         },
         hop: 1,
         sourceSymbol: 'a.ts:foo',

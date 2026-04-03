@@ -24,6 +24,7 @@ function makeRepo(overrides: Partial<Repository> = {}): Repository {
     defaultBranch: 'main',
     lastIndexedCommit: 'abc1234def5678',
     githubAuthType: 'pat',
+    githubAppInstallationId: null,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-06-01T12:00:00Z',
     ...overrides,

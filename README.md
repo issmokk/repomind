@@ -159,6 +159,28 @@ src/
 supabase/migrations/     # Database migrations
 ```
 
+## CI/CD
+
+CI runs automatically on pull requests to `main` and pushes to `main` via GitHub Actions (`.github/workflows/ci.yml`).
+
+**Jobs:**
+- `lint-typecheck`: ESLint + `tsc --noEmit` (parallel)
+- `test`: Vitest with coverage artifact upload (parallel)
+- `migration-check`: Supabase migration dry-run validation (after lint + test pass)
+
+**Required repository secrets:**
+- `SUPABASE_ACCESS_TOKEN`: Supabase personal access token for CLI auth
+- `SUPABASE_PROJECT_REF`: Project reference ID for the dev Supabase instance
+
+**Run the same checks locally:**
+```bash
+npm run lint
+npx tsc --noEmit
+npm run test:run
+```
+
 ## Deployment
 
 Deploy to [Vercel](https://vercel.com). Set env vars in Vercel dashboard. Apply migration to remote Supabase before using API endpoints.
+
+Enable **Web Analytics** and **Speed Insights** in the Vercel project settings dashboard for production observability. No npm packages required.

@@ -16,7 +16,7 @@ const mockJob = {
   completedAt: null,
 };
 
-const _completedJob = {
+const completedJob = {
   ...mockJob,
   status: 'completed',
   processedFiles: 100,
@@ -31,11 +31,6 @@ const mockStorage = {
   getRepository: vi.fn(() =>
     Promise.resolve({ id: 'repo-1', orgId: 'org-1', name: 'test', fullName: 'test/test' }),
   ),
-  getSettings: vi.fn(() => Promise.resolve(null)),
-  getTeamSettingsDecrypted: vi.fn(() => Promise.resolve({
-    embeddingProvider: 'ollama', ollamaModel: 'test', ollamaBaseUrl: 'http://localhost:11434',
-    geminiApiKey: null, geminiEmbeddingModel: 'gemini-embedding-001',
-  })),
 };
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -57,8 +52,6 @@ vi.mock('@/lib/storage/supabase', () => ({
     getActiveJob = mockStorage.getActiveJob;
     getLatestJob = mockStorage.getLatestJob;
     getRepository = mockStorage.getRepository;
-    getSettings = mockStorage.getSettings;
-    getTeamSettingsDecrypted = mockStorage.getTeamSettingsDecrypted;
   },
 }));
 
@@ -69,17 +62,6 @@ vi.mock('@/lib/indexer/pipeline', () => ({
     if (callCount === 2) return { ...mockJob, processedFiles: 20 };
     return null;
   }),
-  processNextBatch: vi.fn(async () => ({ job: mockJob, hasMore: true })),
-}));
-
-vi.mock('@/lib/github', () => ({
-  PersonalAccessTokenAuth: class {},
-  GitHubClient: class {},
-  GitHubFileCache: class {},
-}));
-
-vi.mock('@/lib/indexer/embedding', () => ({
-  createEmbeddingProvider: vi.fn(() => ({})),
 }));
 
 function createRequest(_repoId: string): NextRequest {
@@ -135,5 +117,51 @@ describe('SSE stream route', () => {
     expect(text1).toContain('"processedFiles":10');
 
     reader.cancel();
+  });
+
+  it('does NOT call processNextBatch (regression)', async () => {
+    const pipeline = await import('@/lib/indexer/pipeline');
+    expect(Object.keys(pipeline)).not.toContain('processNextBatch');
+
+    const request = createRequest('repo-1');
+    const params = Promise.resolve({ id: 'repo-1' });
+    const response = await GET(request, { params });
+    const reader = response.body!.getReader();
+    await reader.read();
+    reader.cancel();
+  });
+
+  it('sends job-complete when latest job is terminal', async () => {
+    callCount = 2;
+    mockStorage.getLatestJob.mockResolvedValueOnce(completedJob as never);
+
+    const pipeline = await import('@/lib/indexer/pipeline');
+    vi.mocked(pipeline.checkAndMarkStaleJob).mockResolvedValueOnce(null);
+
+    const request = createRequest('repo-1');
+    const params = Promise.resolve({ id: 'repo-1' });
+    const response = await GET(request, { params });
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+
+    const { value } = await reader.read();
+    const text = decoder.decode(value);
+    expect(text).toContain('event: job-complete');
+    expect(text).toContain('"status":"completed"');
+
+    reader.cancel();
+  });
+
+  it('calls checkAndMarkStaleJob with repo ID', async () => {
+    const pipeline = await import('@/lib/indexer/pipeline');
+
+    const request = createRequest('repo-1');
+    const params = Promise.resolve({ id: 'repo-1' });
+    const response = await GET(request, { params });
+    const reader = response.body!.getReader();
+    await reader.read();
+    reader.cancel();
+
+    expect(pipeline.checkAndMarkStaleJob).toHaveBeenCalled();
   });
 });

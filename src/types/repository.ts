@@ -9,6 +9,7 @@ export type Repository = {
   defaultBranch: string
   lastIndexedCommit: string | null
   githubAuthType: GitHubAuthType
+  githubAppInstallationId: number | null
   createdAt: string
   updatedAt: string
 }

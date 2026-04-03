@@ -30,6 +30,7 @@ export function buildGraphEdges(
     if (resolved.isExternal) {
       edges.push({
         repoId: options.repoId,
+        targetRepoId: null,
         sourceFile: filePath,
         sourceSymbol: filePath,
         sourceType: 'file',
@@ -45,6 +46,7 @@ export function buildGraphEdges(
     } else {
       edges.push({
         repoId: options.repoId,
+        targetRepoId: null,
         sourceFile: filePath,
         sourceSymbol: filePath,
         sourceType: 'file',
@@ -68,6 +70,7 @@ export function buildGraphEdges(
 
     edges.push({
       repoId: options.repoId,
+      targetRepoId: null,
       sourceFile: filePath,
       sourceSymbol: call.containingScope || filePath,
       sourceType: 'function',
@@ -83,6 +86,7 @@ export function buildGraphEdges(
     const parentFile = importMap.get(inh.parentName) ?? null
     edges.push({
       repoId: options.repoId,
+      targetRepoId: null,
       sourceFile: filePath,
       sourceSymbol: inh.childName,
       sourceType: 'class',
@@ -98,6 +102,7 @@ export function buildGraphEdges(
     const targetFile = importMap.get(comp.parentName) ?? null
     edges.push({
       repoId: options.repoId,
+      targetRepoId: null,
       sourceFile: filePath,
       sourceSymbol: comp.childName,
       sourceType: 'class',

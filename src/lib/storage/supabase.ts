@@ -116,6 +116,16 @@ export class SupabaseStorageProvider implements StorageProvider {
     return row ? toCamelCase<Repository>(row) : null
   }
 
+  async findRepositoryByFullName(fullName: string): Promise<Repository | null> {
+    const result = await this.serviceClient
+      .from('repositories')
+      .select('*')
+      .eq('full_name', fullName)
+      .maybeSingle()
+    const row = assertNoError(result, 'findRepositoryByFullName')
+    return row ? toCamelCase<Repository>(row) : null
+  }
+
   async deleteRepository(repoId: string): Promise<void> {
     const result = await this.serviceClient
       .from('repositories')
@@ -180,6 +190,21 @@ export class SupabaseStorageProvider implements StorageProvider {
       .maybeSingle()
     const row = assertNoError(result, 'getCachedFile')
     return row ? toCamelCase<CachedFile>(row) : null
+  }
+
+  async listCachedFilePaths(repoId: string, extension?: string): Promise<string[]> {
+    let query = this.serviceClient
+      .from('cached_files')
+      .select('file_path')
+      .eq('repo_id', repoId)
+
+    if (extension) {
+      query = query.like('file_path', `%.${extension}`)
+    }
+
+    const result = await query
+    const rows = assertNoError(result, 'listCachedFilePaths')
+    return (rows as Array<{ file_path: string }>).map(r => r.file_path)
   }
 
   async setCachedFile(repoId: string, file: CachedFileUpsert): Promise<void> {
@@ -266,6 +291,16 @@ export class SupabaseStorageProvider implements StorageProvider {
       .delete()
       .eq('repo_id', repoId)
     assertNoError(result, 'deleteEdgesByRepo')
+  }
+
+  async deleteCrossRepoEdges(repoIds: string[]): Promise<void> {
+    if (repoIds.length === 0) return
+    const result = await this.serviceClient
+      .from('graph_edges')
+      .delete()
+      .in('repo_id', repoIds)
+      .not('target_repo_id', 'is', null)
+    assertNoError(result, 'deleteCrossRepoEdges')
   }
 
   async queryEdgesBySource(repoId: string, sourceFile: string, sourceSymbol: string): Promise<GraphEdge[]> {

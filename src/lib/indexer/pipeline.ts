@@ -26,6 +26,124 @@ export class PipelineError extends Error {
   }
 }
 
+export type BatchResult = {
+  processed: number
+  failed: number
+  errors: Array<{ error: string; file?: string; timestamp: string }>
+}
+
+export async function processBatchOfFiles(
+  files: FileToProcess[],
+  repoId: string,
+  storage: StorageProvider,
+  githubClient: GitHubClient,
+  fileCache: GitHubFileCache,
+  embeddingProvider: EmbeddingProvider,
+  context: { owner: string; repoName: string; defaultBranch: string; fileTree: string[] },
+): Promise<BatchResult> {
+  let processed = 0
+  let failed = 0
+  const errors: BatchResult['errors'] = []
+
+  for (const file of files) {
+    try {
+      if (file.status === 'removed') {
+        await storage.deleteChunksByFile(repoId, file.path)
+        await storage.deleteEdgesByFile(repoId, file.path)
+        processed++
+        continue
+      }
+
+      if (file.status === 'renamed' && file.previousPath) {
+        await storage.deleteChunksByFile(repoId, file.previousPath)
+        await storage.deleteEdgesByFile(repoId, file.previousPath)
+      }
+
+      if (file.status === 'modified') {
+        await storage.deleteChunksByFile(repoId, file.path)
+        await storage.deleteEdgesByFile(repoId, file.path)
+      }
+
+      const content = await fileCache.fetchOrCacheFile(
+        repoId, context.owner, context.repoName, file.path, context.defaultBranch, file.sha,
+      )
+
+      const language = detectLanguage(file.path) ?? 'unknown'
+
+      let tree
+      let langObj
+      try {
+        await initTreeSitter()
+        tree = await parseCode(content.content, language)
+        langObj = await getLanguage(language)
+      } catch {
+        tree = null
+        langObj = undefined
+      }
+
+      const symbols = tree ? await extractSymbols(tree as never, language, file.path, langObj as never) : []
+      const chunks = await chunkFile(content.content, symbols, file.path, language)
+
+      if (chunks.length > 0) {
+        const contextTexts = chunks.map((c) => c.contextualizedContent)
+        const embeddings = await embeddingProvider.embed(contextTexts)
+
+        const chunkUpserts: ChunkUpsert[] = chunks.map((chunk, i) => ({
+          repoId,
+          filePath: file.path,
+          chunkIndex: chunk.chunkIndex,
+          content: chunk.content,
+          contextualizedContent: chunk.contextualizedContent,
+          language: chunk.language,
+          symbolName: chunk.symbolName,
+          symbolType: chunk.symbolType,
+          startLine: chunk.startLine,
+          endLine: chunk.endLine,
+          parentScope: chunk.parentScope,
+          commitSha: file.sha,
+          embedding: embeddings[i] ?? null,
+          embeddingModel: embeddingProvider.name,
+        }))
+
+        await storage.upsertChunks(chunkUpserts)
+      }
+
+      const imports = tree && langObj ? await extractImports(tree as never, language, file.path, langObj as never) : []
+      const callSites = tree && langObj ? await extractCallSites(tree as never, language, file.path, langObj as never) : []
+      const inheritanceRaw = tree && langObj ? await extractInheritance(tree as never, language, file.path, langObj as never) : []
+
+      const analysisResult: ASTAnalysisResult = {
+        imports,
+        callSites,
+        inheritance: inheritanceRaw.filter((i) => i.kind === 'extends'),
+        composition: inheritanceRaw.filter((i) => i.kind === 'includes' || i.kind === 'extend_module' || i.kind === 'implements'),
+      }
+
+      const edges = buildGraphEdges(file.path, analysisResult, { repoId, fileTree: context.fileTree, language })
+      if (edges.length > 0) {
+        await storage.upsertEdges(edges)
+      }
+
+      processed++
+    } catch (err) {
+      failed++
+      errors.push({
+        error: (err as Error).message,
+        file: file.path,
+        timestamp: new Date().toISOString(),
+      })
+    }
+  }
+
+  return { processed, failed, errors }
+}
+
+export function getAdaptiveBatchSize(totalFiles: number): number {
+  if (totalFiles <= 500) return 5
+  if (totalFiles <= 1000) return 10
+  return 20
+}
+
 export async function startIndexingJob(
   repo: Repository,
   storage: StorageProvider,
@@ -93,7 +211,9 @@ export async function startIndexingJob(
     errorLog: [],
   } as Partial<IndexingJob>)
 
-  // Store file list in job metadata for self-chaining recovery
+  // Store file list in job metadata for processNextBatch recovery (legacy path).
+  // The Inngest function (index-repo.ts) does NOT use this; it passes files via step state.
+  // This will be removed in section-02 when processNextBatch is retired from the SSE loop.
   await storage.updateJobStatus(job.id, 'processing', {
     errorLog: [{ error: '__files__', file: JSON.stringify(filesToProcess), timestamp: '' }],
   } as Partial<IndexingJob>)
@@ -148,7 +268,6 @@ export async function processNextBatch(
 
   const [owner, repoName] = repo.fullName.split('/')
 
-  // Recover file list from job metadata
   const filesEntry = currentJob.errorLog?.find((e) => e.error === '__files__')
   let filesToProcess: FileToProcess[] = []
   if (filesEntry?.file) {
@@ -163,101 +282,14 @@ export async function processNextBatch(
   }
 
   const fileTree = filesToProcess.map((f) => f.path)
-  let processedCount = currentJob.processedFiles
-  let failedCount = currentJob.failedFiles
+  const batchResult = await processBatchOfFiles(
+    batch, repoId, storage, githubClient, fileCache, embeddingProvider,
+    { owner, repoName, defaultBranch: repo.defaultBranch, fileTree },
+  )
+
+  const processedCount = currentJob.processedFiles + batchResult.processed
+  const failedCount = currentJob.failedFiles + batchResult.failed
   const realErrors = (currentJob.errorLog ?? []).filter((e) => e.error !== '__files__')
-
-  for (const file of batch) {
-    try {
-      await storage.updateJobProgress(jobId, { currentFile: file.path })
-
-      if (file.status === 'removed') {
-        await storage.deleteChunksByFile(repoId, file.path)
-        await storage.deleteEdgesByFile(repoId, file.path)
-        processedCount++
-        continue
-      }
-
-      if (file.status === 'renamed' && file.previousPath) {
-        await storage.deleteChunksByFile(repoId, file.previousPath)
-        await storage.deleteEdgesByFile(repoId, file.previousPath)
-      }
-
-      if (file.status === 'modified') {
-        await storage.deleteChunksByFile(repoId, file.path)
-        await storage.deleteEdgesByFile(repoId, file.path)
-      }
-
-      const content = await fileCache.fetchOrCacheFile(
-        repoId, owner, repoName, file.path, repo.defaultBranch, file.sha,
-      )
-
-      const language = detectLanguage(file.path) ?? 'unknown'
-
-      let tree
-      let langObj
-      try {
-        await initTreeSitter()
-        tree = await parseCode(content.content, language)
-        langObj = await getLanguage(language)
-      } catch {
-        tree = null
-        langObj = undefined
-      }
-
-      const symbols = tree ? await extractSymbols(tree as never, language, file.path, langObj as never) : []
-      const chunks = await chunkFile(content.content, symbols, file.path, language)
-
-      if (chunks.length > 0) {
-        const contextTexts = chunks.map((c) => c.contextualizedContent)
-        const embeddings = await embeddingProvider.embed(contextTexts)
-
-        const chunkUpserts: ChunkUpsert[] = chunks.map((chunk, i) => ({
-          repoId,
-          filePath: file.path,
-          chunkIndex: chunk.chunkIndex,
-          content: chunk.content,
-          contextualizedContent: chunk.contextualizedContent,
-          language: chunk.language,
-          symbolName: chunk.symbolName,
-          symbolType: chunk.symbolType,
-          startLine: chunk.startLine,
-          endLine: chunk.endLine,
-          parentScope: chunk.parentScope,
-          commitSha: file.sha,
-          embedding: embeddings[i] ?? null,
-          embeddingModel: embeddingProvider.name,
-        }))
-
-        await storage.upsertChunks(chunkUpserts)
-      }
-
-      const imports = tree && langObj ? await extractImports(tree as never, language, file.path, langObj as never) : []
-      const callSites = tree && langObj ? await extractCallSites(tree as never, language, file.path, langObj as never) : []
-      const inheritanceRaw = tree && langObj ? await extractInheritance(tree as never, language, file.path, langObj as never) : []
-
-      const analysisResult: ASTAnalysisResult = {
-        imports,
-        callSites,
-        inheritance: inheritanceRaw.filter((i) => i.kind === 'extends'),
-        composition: inheritanceRaw.filter((i) => i.kind === 'includes' || i.kind === 'extend_module' || i.kind === 'implements'),
-      }
-
-      const edges = buildGraphEdges(file.path, analysisResult, { repoId, fileTree, language })
-      if (edges.length > 0) {
-        await storage.upsertEdges(edges)
-      }
-
-      processedCount++
-    } catch (err) {
-      failedCount++
-      realErrors.push({
-        error: (err as Error).message,
-        file: file.path,
-        timestamp: new Date().toISOString(),
-      })
-    }
-  }
 
   await storage.updateJobProgress(jobId, {
     processedFiles: processedCount,
@@ -275,7 +307,7 @@ export async function processNextBatch(
     ...currentJob,
     processedFiles: processedCount,
     failedFiles: failedCount,
-    errorLog: [...realErrors, ...(filesEntry ? [filesEntry] : [])],
+    errorLog: [...realErrors, ...batchResult.errors, ...(filesEntry ? [filesEntry] : [])],
     status: 'processing',
   }
 

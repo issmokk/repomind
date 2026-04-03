@@ -6,14 +6,14 @@ import type { GraphEdge } from '@/types/graph'
 
 const sampleEdges: GraphEdge[] = [
   {
-    id: 1, repoId: 'repo-1', sourceFile: 'a.ts', sourceSymbol: 'funcA', sourceType: 'function',
+    id: 1, repoId: 'repo-1', targetRepoId: null, sourceFile: 'a.ts', sourceSymbol: 'funcA', sourceType: 'function',
     targetFile: 'b.ts', targetSymbol: 'funcB', targetType: 'function',
-    relationshipType: 'calls', metadata: {}, createdAt: '2025-01-01',
+    relationshipType: 'calls', metadata: {}, confidence: null, createdAt: '2025-01-01',
   },
   {
-    id: 2, repoId: 'repo-1', sourceFile: 'a.ts', sourceSymbol: 'funcA', sourceType: 'function',
+    id: 2, repoId: 'repo-1', targetRepoId: null, sourceFile: 'a.ts', sourceSymbol: 'funcA', sourceType: 'function',
     targetFile: 'c.ts', targetSymbol: 'ClassC', targetType: 'class',
-    relationshipType: 'imports', metadata: {}, createdAt: '2025-01-01',
+    relationshipType: 'imports', metadata: {}, confidence: null, createdAt: '2025-01-01',
   },
 ]
 

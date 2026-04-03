@@ -18,9 +18,8 @@ vi.mock('@/components/chat/feedback-buttons', () => ({
 describe('Accessibility', () => {
   it('chat message area has role="log" and aria-live="polite"', () => {
     const messages: UIMessage[] = [{
-      id: '1', role: 'user', content: 'hello',
+      id: '1', role: 'user',
       parts: [{ type: 'text', text: 'hello' }],
-      createdAt: new Date(),
     }]
     render(<ChatMessages messages={messages} status="ready" />)
     const logRegion = screen.getByRole('log')

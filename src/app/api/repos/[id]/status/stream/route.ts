@@ -1,8 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { getRepoContext } from '../../../_helpers'
-import { checkAndMarkStaleJob, processNextBatch } from '@/lib/indexer/pipeline'
-import { GitHubClient, PersonalAccessTokenAuth, GitHubFileCache } from '@/lib/github'
-import { createEmbeddingProvider } from '@/lib/indexer/embedding'
+import { checkAndMarkStaleJob } from '@/lib/indexer/pipeline'
 
 const POLL_INTERVAL = 2000
 const HEARTBEAT_INTERVAL = 15000
@@ -18,18 +16,6 @@ export async function GET(
   const ctxResult = await getRepoContext(id)
   if (ctxResult instanceof NextResponse) return ctxResult
   const ctx = ctxResult
-
-  const ghAuth = new PersonalAccessTokenAuth()
-  const ghClient = new GitHubClient(ghAuth)
-  const fileCache = new GitHubFileCache(ghClient, ctx.storage)
-  const settings = await ctx.storage.getSettings(id, ctx.supabase)
-  const teamSettings = await ctx.storage.getTeamSettingsDecrypted(ctx.orgId)
-  const embeddingProvider = createEmbeddingProvider(settings?.embeddingProvider ?? 'ollama', {
-    geminiApiKey: teamSettings.geminiApiKey ?? undefined,
-    geminiEmbeddingModel: teamSettings.geminiEmbeddingModel,
-    ollamaModel: teamSettings.ollamaModel,
-    ollamaBaseUrl: teamSettings.ollamaBaseUrl,
-  })
 
   const encoder = new TextEncoder()
   let pollTimer: ReturnType<typeof setInterval> | null = null
@@ -66,8 +52,6 @@ export async function GET(
         }
       }
 
-      let processing = false
-
       async function poll() {
         try {
           const job = await checkAndMarkStaleJob(id, ctx.storage)
@@ -78,24 +62,6 @@ export async function GET(
             if (serialized !== lastSerialized) {
               lastSerialized = serialized
               sendEvent('job-update', job)
-            }
-
-            if (!processing) {
-              processing = true
-              try {
-                const result = await processNextBatch(
-                  job.id, id, ctx.storage, ghClient, fileCache, embeddingProvider,
-                )
-                const updatedSerialized = JSON.stringify(result.job)
-                if (updatedSerialized !== lastSerialized) {
-                  lastSerialized = updatedSerialized
-                  sendEvent('job-update', result.job)
-                }
-              } catch (err) {
-                console.error('processNextBatch error:', err)
-              } finally {
-                processing = false
-              }
             }
           } else {
             const latestJob = await ctx.storage.getLatestJob(id, ctx.supabase)
