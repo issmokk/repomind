@@ -75,7 +75,11 @@ export async function GET(
               sentNoJob = true
             }
           }
-        } catch {
+        } catch (err) {
+          console.error('SSE poll error:', err)
+          try {
+            sendEvent('error', { message: 'Internal polling error' })
+          } catch { /* stream already closed */ }
           cleanup()
         }
       }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import Link from 'next/link';
 import { RefreshCw, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -42,7 +42,7 @@ interface RepoCardProps {
   viewMode: 'grid' | 'list';
 }
 
-export function RepoCard({ repo, onReindex, onDelete, viewMode }: RepoCardProps) {
+export const RepoCard = memo(function RepoCard({ repo, onReindex, onDelete, viewMode }: RepoCardProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
@@ -112,4 +112,4 @@ export function RepoCard({ repo, onReindex, onDelete, viewMode }: RepoCardProps)
       />
     </>
   );
-}
+});

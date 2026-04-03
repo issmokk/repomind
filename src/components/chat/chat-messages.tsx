@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import type { UIMessage } from 'ai';
 import { MessagePartRenderer } from './message-part-renderer';
 import { ConfidenceBadge } from './confidence-badge';
@@ -13,7 +13,7 @@ type Props = {
   onSourceClick?: (url: string) => void;
 };
 
-export function ChatMessages({ messages, status, onSourceClick }: Props) {
+export const ChatMessages = memo(function ChatMessages({ messages, status, onSourceClick }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -66,4 +66,4 @@ export function ChatMessages({ messages, status, onSourceClick }: Props) {
       </span>
     </div>
   );
-}
+});

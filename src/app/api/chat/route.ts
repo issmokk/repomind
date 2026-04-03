@@ -1,12 +1,27 @@
 import { NextResponse } from 'next/server'
 import { after } from 'next/server'
 import { streamText } from 'ai'
+import { z } from 'zod'
 import { getAuthContext } from '@/app/api/repos/_helpers'
 import { retrieveContext } from '@/lib/rag/retriever'
 import { buildContextWindow } from '@/lib/rag/prompt-builder'
 import { analyzeQuery } from '@/lib/rag/query-analyzer'
 import { getLanguageModel, getEmbeddingProvider } from '@/lib/rag/providers'
 import type { RagConfig } from '@/lib/rag/types'
+
+const messagePart = z.object({ type: z.string() }).passthrough()
+
+const chatRequestSchema = z.object({
+  question: z.string().min(1).max(10_000).optional(),
+  messages: z.array(z.object({
+    role: z.enum(['user', 'assistant', 'system']),
+    content: z.string().optional(),
+    parts: z.array(messagePart).optional(),
+  })).optional(),
+  repoIds: z.array(z.string().uuid()).min(1),
+  sessionId: z.string().uuid().nullable().optional(),
+  filters: z.record(z.string(), z.string()).optional(),
+})
 
 export const runtime = 'nodejs'
 
@@ -52,43 +67,39 @@ export async function POST(req: Request) {
   const auth = await getAuthContext()
   if (auth instanceof NextResponse) return auth
 
-  let body: Record<string, unknown>
+  let rawBody: unknown
   try {
-    body = await req.json()
+    rawBody = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  const repoIds = body.repoIds as string[] | undefined
-  const sessionId = (body.sessionId as string) ?? null
-  const filters = body.filters as Record<string, string> | undefined
-
-  let question: string | undefined
-  if (typeof body.question === 'string') {
-    question = body.question
-  } else if (Array.isArray(body.messages)) {
-    const lastUserMsg = [...body.messages].reverse().find(
-      (m: { role?: string }) => m.role === 'user'
+  const parsed = chatRequestSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid request', details: parsed.error.flatten().fieldErrors },
+      { status: 400 }
     )
+  }
+
+  const { repoIds, sessionId = null, filters } = parsed.data
+  let question: string | undefined = parsed.data.question
+
+  if (!question && parsed.data.messages) {
+    const lastUserMsg = [...parsed.data.messages].reverse().find((m) => m.role === 'user')
     if (lastUserMsg) {
       if (typeof lastUserMsg.content === 'string') {
         question = lastUserMsg.content
-      } else if (Array.isArray(lastUserMsg.parts)) {
+      } else if (lastUserMsg.parts) {
         question = lastUserMsg.parts
-          .filter((p: { type?: string }) => p.type === 'text')
-          .map((p: { text?: string }) => p.text)
+          .filter((p) => p.type === 'text')
+          .map((p) => (p as { text?: string }).text ?? '')
           .join('')
       }
     }
   }
 
-  if (!question || typeof question !== 'string') {
-    return NextResponse.json(
-      { error: 'Question and at least one repository ID are required.' },
-      { status: 400 }
-    )
-  }
-  if (!repoIds || !Array.isArray(repoIds) || repoIds.length === 0) {
+  if (!question) {
     return NextResponse.json(
       { error: 'Question and at least one repository ID are required.' },
       { status: 400 }
