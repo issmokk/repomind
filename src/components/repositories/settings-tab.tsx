@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { RepositorySettings, RepositorySettingsUpdate } from '@/types/repository';
+import type { IndexingMethod, RepositorySettings, RepositorySettingsUpdate } from '@/types/repository';
 import type { KeyedMutator } from 'swr';
 
 const INDEXING_METHODS = [
@@ -23,7 +23,7 @@ interface SettingsTabProps {
 }
 
 export function SettingsTab({ repoId, settings, mutateSettings }: SettingsTabProps) {
-  const [indexingMethod, setIndexingMethod] = useState('manual');
+  const [indexingMethod, setIndexingMethod] = useState<IndexingMethod>(settings.indexingMethod);
   const [branchFilter, setBranchFilter] = useState<string[]>(settings.branchFilter);
   const [branchInput, setBranchInput] = useState('');
   const [includePatterns, setIncludePatterns] = useState<string[]>(settings.includePatterns);
@@ -33,6 +33,7 @@ export function SettingsTab({ repoId, settings, mutateSettings }: SettingsTabPro
   const [saving, setSaving] = useState(false);
 
   const isDirty =
+    indexingMethod !== settings.indexingMethod ||
     JSON.stringify(branchFilter) !== JSON.stringify(settings.branchFilter) ||
     JSON.stringify(includePatterns) !== JSON.stringify(settings.includePatterns) ||
     JSON.stringify(excludePatterns) !== JSON.stringify(settings.excludePatterns);
@@ -78,6 +79,9 @@ export function SettingsTab({ repoId, settings, mutateSettings }: SettingsTabPro
     setSaving(true);
     try {
       const body: RepositorySettingsUpdate = {};
+      if (indexingMethod !== settings.indexingMethod) {
+        body.indexingMethod = indexingMethod;
+      }
       if (JSON.stringify(branchFilter) !== JSON.stringify(settings.branchFilter)) {
         body.branchFilter = branchFilter;
       }
@@ -103,6 +107,7 @@ export function SettingsTab({ repoId, settings, mutateSettings }: SettingsTabPro
       toast.success('Settings saved');
       const updated = await mutateSettings();
       if (updated) {
+        setIndexingMethod(updated.indexingMethod);
         setBranchFilter(updated.branchFilter);
         setIncludePatterns(updated.includePatterns);
         setExcludePatterns(updated.excludePatterns);
@@ -118,34 +123,42 @@ export function SettingsTab({ repoId, settings, mutateSettings }: SettingsTabPro
     <div className="space-y-6">
       <Card>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-medium">Indexing Method</h3>
-            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">Coming soon</span>
-          </div>
+          <h3 className="text-sm font-medium">Indexing Method</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {INDEXING_METHODS.map((method) => (
-              <label
-                key={method.value}
-                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
-                  indexingMethod === method.value
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="indexingMethod"
-                  value={method.value}
-                  checked={indexingMethod === method.value}
-                  onChange={(e) => setIndexingMethod(e.target.value)}
-                  className="mt-0.5"
-                />
-                <div>
-                  <span className="text-sm font-medium">{method.label}</span>
-                  <p className="text-xs text-muted-foreground">{method.description}</p>
-                </div>
-              </label>
-            ))}
+            {INDEXING_METHODS.map((method) => {
+              const isCron = method.value === 'cron';
+              return (
+                <label
+                  key={method.value}
+                  className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
+                    isCron
+                      ? 'cursor-not-allowed opacity-50'
+                      : 'cursor-pointer'
+                  } ${
+                    indexingMethod === method.value
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="indexingMethod"
+                    value={method.value}
+                    checked={indexingMethod === method.value}
+                    onChange={(e) => setIndexingMethod(e.target.value as IndexingMethod)}
+                    disabled={isCron}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <span className="text-sm font-medium">{method.label}</span>
+                    {isCron && (
+                      <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">Coming soon</span>
+                    )}
+                    <p className="text-xs text-muted-foreground">{method.description}</p>
+                  </div>
+                </label>
+              );
+            })}
           </div>
         </CardContent>
       </Card>

@@ -41,6 +41,7 @@ const defaultProps = {
     excludePatterns: [],
     embeddingProvider: 'openai',
     embeddingModel: 'text-embedding-3-small',
+    indexingMethod: 'manual' as const,
     autoIndexOnAdd: true,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-06-01T12:00:00Z',

@@ -43,6 +43,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, skipped: 'unknown repo' })
   }
 
+  const settings = await storage.getSettingsInternal(repo.id)
+  const method = settings?.indexingMethod ?? 'manual'
+  if (method !== 'webhook' && method !== 'git_diff') {
+    return NextResponse.json({ ok: true, skipped: `indexing method is ${method}, not webhook/git_diff` })
+  }
+
   if (repo.lastIndexedCommit === payload.after) {
     return NextResponse.json({ ok: true, skipped: 'duplicate commit' })
   }

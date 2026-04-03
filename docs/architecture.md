@@ -183,6 +183,7 @@ erDiagram
         text[] exclude_patterns
         text embedding_provider
         text embedding_model
+        indexing_method indexing_method
         boolean auto_index_on_add
     }
 
@@ -560,7 +561,7 @@ App Shell (SidebarProvider + SidebarInset)
       RepoDetailTabs
         OverviewTab (stats, repo info, actions)
         IndexingTab (SSE progress, cancel, error log)
-        SettingsTab (branch filter, patterns)
+        SettingsTab (indexing method, branch filter, patterns)
     Knowledge Graph Page
       ControlsPanel (layout, filters, search, legend)
       GraphCanvas (Cytoscape.js, node detail popover)

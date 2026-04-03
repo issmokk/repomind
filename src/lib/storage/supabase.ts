@@ -154,6 +154,7 @@ export class SupabaseStorageProvider implements StorageProvider {
         exclude_patterns: [],
         embedding_provider: 'ollama',
         embedding_model: 'gte-qwen2-1.5b-instruct',
+        indexing_method: 'manual',
         auto_index_on_add: false,
       })
       .select()
@@ -168,6 +169,16 @@ export class SupabaseStorageProvider implements StorageProvider {
       .eq('repo_id', repoId)
       .maybeSingle()
     const row = assertNoError(result, 'getSettings')
+    return row ? toCamelCase<RepositorySettings>(row) : null
+  }
+
+  async getSettingsInternal(repoId: string): Promise<RepositorySettings | null> {
+    const result = await this.serviceClient
+      .from('repository_settings')
+      .select('*')
+      .eq('repo_id', repoId)
+      .maybeSingle()
+    const row = assertNoError(result, 'getSettingsInternal')
     return row ? toCamelCase<RepositorySettings>(row) : null
   }
 
