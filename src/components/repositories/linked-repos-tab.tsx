@@ -25,7 +25,7 @@ interface LinkedReposTabProps {
   repoId: string;
 }
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+const fetcher = (url: string) => fetch(url).then(r => r.json()).then(d => Array.isArray(d) ? d : []);
 
 export function LinkedReposTab({ repoId }: LinkedReposTabProps) {
   const { data: linkGroups, mutate, isLoading } = useSWR<RepoLinkWithMemberships[]>(
