@@ -14,7 +14,8 @@
     "test": "vitest",
     "test:run": "tsc --noEmit && vitest run",
     "test:coverage": "vitest run --coverage",
-    "eval": "vitest run --config vitest.eval.config.ts"
+    "eval": "vitest run --config vitest.eval.config.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.64",
@@ -67,6 +68,7 @@
     "@vitest/coverage-v8": "^4.1.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "husky": "^9.1.7",
     "jsdom": "^29.0.1",
     "prettier": "^3.8.1",
     "tailwindcss": "^4",
