@@ -5,7 +5,6 @@ import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } 
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Check, AlertCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 
 export type ProviderStatus = {
   name: string
@@ -16,16 +15,9 @@ type ProviderChainProps = {
   providerOrder: string[]
   providers: ProviderStatus[]
   onReorder: (newOrder: string[]) => void
-  onConfigure: (provider: string) => void
 }
 
-function SortableProvider({
-  provider,
-  onConfigure,
-}: {
-  provider: ProviderStatus
-  onConfigure: (name: string) => void
-}) {
+function SortableProvider({ provider }: { provider: ProviderStatus }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: provider.name })
 
   const style = {
@@ -55,14 +47,11 @@ function SortableProvider({
           Not configured
         </Badge>
       )}
-      <Button variant="ghost" size="sm" onClick={() => onConfigure(provider.name)}>
-        Configure
-      </Button>
     </li>
   )
 }
 
-export function ProviderChain({ providerOrder, providers, onReorder, onConfigure }: ProviderChainProps) {
+export function ProviderChain({ providerOrder, providers, onReorder }: ProviderChainProps) {
   const orderedProviders = providerOrder
     .map((name) => providers.find((p) => p.name === name))
     .filter((p): p is ProviderStatus => !!p)
@@ -85,7 +74,7 @@ export function ProviderChain({ providerOrder, providers, onReorder, onConfigure
         <SortableContext items={providerOrder} strategy={verticalListSortingStrategy}>
           <ul className="space-y-2" role="list">
             {orderedProviders.map((provider) => (
-              <SortableProvider key={provider.name} provider={provider} onConfigure={onConfigure} />
+              <SortableProvider key={provider.name} provider={provider} />
             ))}
           </ul>
         </SortableContext>
