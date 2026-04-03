@@ -134,7 +134,6 @@ export default function SettingsPage() {
           providerOrder={effectiveOrder}
           providers={providers}
           onReorder={setProviderOrder}
-          onConfigure={() => {}}
         />
 
         <div className="space-y-6 border-t pt-4">
