@@ -20,6 +20,8 @@ export const indexRepoFunction = inngest.createFunction(
     id: 'index-repo',
     name: 'Index Repository',
     concurrency: [{ limit: 1, key: 'event.data.repoId' }],
+    retries: 3,
+    cancelOn: [{ event: 'repo/index.cancel', match: 'data.repoId' }],
     triggers: [{ event: 'repo/index' }],
   },
   async ({ event, step }) => {
@@ -107,7 +109,7 @@ export const indexRepoFunction = inngest.createFunction(
 
         const settings = await storage.getSettings(repoId, serviceClient)
         const teamSettings = await storage.getTeamSettingsDecrypted(orgId)
-        const embeddingProvider = createEmbeddingProvider(settings?.embeddingProvider ?? 'ollama', {
+        const embeddingProvider = createEmbeddingProvider(teamSettings.embeddingProvider ?? settings?.embeddingProvider ?? 'ollama', {
           geminiApiKey: teamSettings.geminiApiKey ?? undefined,
           geminiEmbeddingModel: teamSettings.geminiEmbeddingModel,
           ollamaModel: teamSettings.ollamaModel,

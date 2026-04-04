@@ -1,10 +1,11 @@
 import { serve } from 'inngest/next'
 import { inngest } from '@/lib/inngest/client'
 import { indexRepoFunction } from '@/lib/inngest/functions/index-repo'
+import { debugFetchFunction } from '@/lib/inngest/functions/debug-fetch'
 
 const handler = serve({
   client: inngest,
-  functions: [indexRepoFunction],
+  functions: [indexRepoFunction, debugFetchFunction],
 })
 
 export const { GET, POST, PUT } = handler

@@ -50,20 +50,14 @@ export class GitHubClient {
     ref: string,
     blobSha?: string,
   ): Promise<FileContent> {
-    try {
-      const data = await this.request<{ content: string; sha: string; size: number }>(
-        `/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${ref}`,
-      )
-      const content = Buffer.from(data.content, 'base64').toString('utf-8')
-      return { content, sha: data.sha, size: data.size, encoding: 'utf-8' }
-    } catch (err) {
-      const message = (err as Error).message ?? ''
-      if (message.includes('too large') || message.includes('403')) {
-        if (!blobSha) throw err
-        return this.getBlob(owner, repo, blobSha)
-      }
-      throw err
+    if (blobSha) {
+      return this.getBlob(owner, repo, blobSha)
     }
+    const data = await this.request<{ content: string; sha: string; size: number }>(
+      `/repos/${owner}/${repo}/contents/${path}?ref=${ref}`,
+    )
+    const content = Buffer.from(data.content, 'base64').toString('utf-8')
+    return { content, sha: data.sha, size: data.size, encoding: 'utf-8' }
   }
 
   async compareCommits(
@@ -99,10 +93,19 @@ export class GitHubClient {
 
   private async request<T = unknown>(path: string): Promise<T> {
     const headers = await this.auth.getHeaders()
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      headers,
-      signal: AbortSignal.timeout(30_000),
-    })
+    const url = `${this.baseUrl}${path}`
+
+    let response: Response
+    try {
+      response = await fetch(url, {
+        headers,
+        signal: AbortSignal.timeout(30_000),
+      })
+    } catch (err) {
+      const cause = (err as Error).cause
+      const causeMsg = cause instanceof Error ? `: ${cause.message}` : ''
+      throw new Error(`Network error fetching ${path}${causeMsg}`)
+    }
 
     await this.checkRateLimit(response)
 
