@@ -64,9 +64,16 @@ export async function processBatchOfFiles(
         await storage.deleteEdgesByFile(repoId, file.path)
       }
 
-      const content = await fileCache.fetchOrCacheFile(
-        repoId, context.owner, context.repoName, file.path, context.defaultBranch, file.sha,
-      )
+      let content
+      try {
+        content = await fileCache.fetchOrCacheFile(
+          repoId, context.owner, context.repoName, file.path, context.defaultBranch, file.sha,
+        )
+      } catch (fetchErr) {
+        const cause = (fetchErr as Error).cause
+        const causeMsg = cause instanceof Error ? cause.message : String(cause ?? '')
+        throw new Error(`[file-fetch] ${(fetchErr as Error).message}${causeMsg ? ` cause: ${causeMsg}` : ''}`)
+      }
 
       const language = detectLanguage(file.path) ?? 'unknown'
 
@@ -86,7 +93,14 @@ export async function processBatchOfFiles(
 
       if (chunks.length > 0) {
         const contextTexts = chunks.map((c) => c.contextualizedContent)
-        const embeddings = await embeddingProvider.embed(contextTexts)
+        let embeddings: number[][]
+        try {
+          embeddings = await embeddingProvider.embed(contextTexts)
+        } catch (embedErr) {
+          const cause = (embedErr as Error).cause
+          const causeMsg = cause instanceof Error ? cause.message : String(cause ?? '')
+          throw new Error(`[embedding] ${(embedErr as Error).message}${causeMsg ? ` cause: ${causeMsg}` : ''}`)
+        }
 
         const chunkUpserts: ChunkUpsert[] = chunks.map((chunk, i) => ({
           repoId,
@@ -105,7 +119,11 @@ export async function processBatchOfFiles(
           embeddingModel: embeddingProvider.name,
         }))
 
-        await storage.upsertChunks(chunkUpserts)
+        try {
+          await storage.upsertChunks(chunkUpserts)
+        } catch (upsertErr) {
+          throw new Error(`[db-upsert] ${(upsertErr as Error).message}`)
+        }
       }
 
       const imports = tree && langObj ? await extractImports(tree as never, language, file.path, langObj as never) : []
@@ -139,9 +157,9 @@ export async function processBatchOfFiles(
 }
 
 export function getAdaptiveBatchSize(totalFiles: number): number {
-  if (totalFiles <= 500) return 5
+  if (totalFiles <= 200) return 5
   if (totalFiles <= 1000) return 10
-  return 20
+  return 15
 }
 
 export async function startIndexingJob(

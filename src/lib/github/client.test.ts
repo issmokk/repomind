@@ -63,18 +63,17 @@ describe('GitHubClient', () => {
     expect(result.sha).toBe('abc123')
   })
 
-  it('getFileContent falls back to Blobs API for large files', async () => {
+  it('getFileContent uses Blobs API directly when blobSha is provided', async () => {
     const encoded = Buffer.from('large file content').toString('base64')
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(mockFetchResponse({ message: 'This API returns blobs up to 1 MB in size. File too large' }, 403))
       .mockResolvedValueOnce(mockFetchResponse({ content: encoded, sha: 'blob-sha', size: 2000000 }))
 
     vi.stubGlobal('fetch', fetchMock)
 
     const result = await client.getFileContent('owner', 'repo', 'big-file.bin', 'main', 'blob-sha')
     expect(result.content).toBe('large file content')
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(fetchMock.mock.calls[1][0]).toContain('/git/blobs/blob-sha')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0][0]).toContain('/git/blobs/blob-sha')
   })
 
   it('compareCommits returns diff entries', async () => {

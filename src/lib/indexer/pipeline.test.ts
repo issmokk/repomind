@@ -286,17 +286,17 @@ describe('processBatchOfFiles', () => {
 })
 
 describe('getAdaptiveBatchSize', () => {
-  it('returns 5 for <= 500 files', () => {
+  it('returns 5 for <= 200 files', () => {
     expect(getAdaptiveBatchSize(1)).toBe(5)
-    expect(getAdaptiveBatchSize(500)).toBe(5)
+    expect(getAdaptiveBatchSize(200)).toBe(5)
   })
 
-  it('returns 10 for 501-1000 files', () => {
-    expect(getAdaptiveBatchSize(501)).toBe(10)
+  it('returns 10 for 201-1000 files', () => {
+    expect(getAdaptiveBatchSize(201)).toBe(10)
     expect(getAdaptiveBatchSize(1000)).toBe(10)
   })
 
-  it('returns 20 for > 1000 files', () => {
-    expect(getAdaptiveBatchSize(1001)).toBe(20)
+  it('returns 15 for > 1000 files', () => {
+    expect(getAdaptiveBatchSize(1001)).toBe(15)
   })
 })

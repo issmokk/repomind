@@ -75,7 +75,7 @@ describe('DELETE /api/repos/[id]/index', () => {
     vi.clearAllMocks()
   })
 
-  it('cancels active job directly (no Inngest involvement)', async () => {
+  it('cancels active job and sends Inngest cancel event', async () => {
     mockStorage.getActiveJob.mockResolvedValue({
       id: 'job-1',
       status: 'processing',
@@ -89,7 +89,9 @@ describe('DELETE /api/repos/[id]/index', () => {
     })
     const res = await DELETE(req, { params: Promise.resolve({ id: 'repo-1' }) })
     expect(res.status).toBe(200)
-    expect(mockSend).not.toHaveBeenCalled()
+    expect(mockSend).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'repo/index.cancel', data: { repoId: 'repo-1' } }),
+    )
     expect(mockStorage.updateJobStatus).toHaveBeenCalledWith(
       'job-1',
       'failed',

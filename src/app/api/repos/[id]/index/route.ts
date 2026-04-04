@@ -23,6 +23,8 @@ export async function DELETE(
     completedAt: new Date().toISOString(),
   })
 
+  await inngest.send({ name: 'repo/index.cancel', data: { repoId: id } })
+
   return NextResponse.json({ success: true })
 }
 

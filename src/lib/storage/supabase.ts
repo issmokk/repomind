@@ -146,8 +146,8 @@ export class SupabaseStorageProvider implements StorageProvider {
         branch_filter: ['main'],
         include_patterns: [],
         exclude_patterns: [],
-        embedding_provider: 'ollama',
-        embedding_model: 'gte-qwen2-1.5b-instruct',
+        embedding_provider: 'gemini',
+        embedding_model: 'gemini-embedding-001',
         indexing_method: 'manual',
         auto_index_on_add: false,
       })

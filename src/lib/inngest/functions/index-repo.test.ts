@@ -167,13 +167,12 @@ describe('index-repo Inngest function', () => {
       expect(mockStorage.updateJobProgress).toHaveBeenCalled()
     })
 
-    it('uses adaptive batch sizing: 5 for <= 500 files', async () => {
+    it('uses adaptive batch sizing: 5 for <= 200 files', async () => {
       const { getAdaptiveBatchSize } = await import('@/lib/indexer/pipeline')
-      expect(getAdaptiveBatchSize(100)).toBe(5)
-      expect(getAdaptiveBatchSize(500)).toBe(5)
-      expect(getAdaptiveBatchSize(501)).toBe(10)
-      expect(getAdaptiveBatchSize(1000)).toBe(10)
-      expect(getAdaptiveBatchSize(1001)).toBe(20)
+      expect(getAdaptiveBatchSize(50)).toBe(5)
+      expect(getAdaptiveBatchSize(200)).toBe(5)
+      expect(getAdaptiveBatchSize(500)).toBe(10)
+      expect(getAdaptiveBatchSize(1001)).toBe(15)
     })
   })
 
