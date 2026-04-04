@@ -25,7 +25,7 @@ export const indexRepoFunction = inngest.createFunction(
     triggers: [{ event: 'repo/index' }],
   },
   async ({ event, step }) => {
-    const { repoId, jobId } = event.data as RepoIndexEventData
+    const { repoId, jobId, triggerType } = event.data as RepoIndexEventData
 
     const initResult = await step.run('initialize', async () => {
       const storage = new SupabaseStorageProvider()
@@ -43,7 +43,8 @@ export const indexRepoFunction = inngest.createFunction(
       let filesToProcess: FileToProcess[]
       let headCommitSha: string = headBranch
 
-      if (!repo.lastIndexedCommit) {
+      const useFullIndex = !repo.lastIndexedCommit || triggerType === 'manual'
+      if (useFullIndex) {
         await storage.bulkInvalidateCache(repoId)
         await storage.updateJobStatus(jobId, 'fetching_files')
 
@@ -58,7 +59,7 @@ export const indexRepoFunction = inngest.createFunction(
       } else {
         await storage.updateJobStatus(jobId, 'fetching_files')
 
-        const diff = await ghClient.compareCommits(owner, repoName, repo.lastIndexedCommit, headBranch)
+        const diff = await ghClient.compareCommits(owner, repoName, repo.lastIndexedCommit!, headBranch)
         filesToProcess = diff
           .filter((entry) => {
             if (entry.status === 'removed') return true

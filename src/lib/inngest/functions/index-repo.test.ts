@@ -126,7 +126,7 @@ describe('index-repo Inngest function', () => {
       expect(mockGhClient.compareCommits).not.toHaveBeenCalled()
     })
 
-    it('fetches file list via git diff when lastIndexedCommit exists', async () => {
+    it('fetches file list via git diff when lastIndexedCommit exists and trigger is webhook', async () => {
       mockStorage.getRepository.mockResolvedValue({
         ...baseRepo,
         lastIndexedCommit: 'abc123',
@@ -135,8 +135,19 @@ describe('index-repo Inngest function', () => {
         { filename: 'src/changed.ts', sha: 'xyz', status: 'modified' },
       ])
 
-      await runFunction()
+      await runFunction({ triggerType: 'webhook' })
       expect(mockGhClient.compareCommits).toHaveBeenCalledWith('owner', 'repo', 'abc123', 'main')
+    })
+
+    it('does full scan on manual trigger even when lastIndexedCommit exists', async () => {
+      mockStorage.getRepository.mockResolvedValue({
+        ...baseRepo,
+        lastIndexedCommit: 'abc123',
+      })
+
+      await runFunction({ triggerType: 'manual' })
+      expect(mockGhClient.getFileTree).toHaveBeenCalled()
+      expect(mockGhClient.compareCommits).not.toHaveBeenCalled()
     })
 
     it('returns file list via step state (not via errorLog)', async () => {
