@@ -1,10 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Play, Square, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Play, Square, AlertTriangle, ChevronDown, ChevronRight, RotateCcw, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { mapJobStatus } from '@/lib/status-utils';
 import { useIndexingStatus } from '@/hooks/use-indexing-status';
@@ -66,23 +72,24 @@ export function IndexingTab({ repoId, initialJob }: IndexingTabProps) {
     return () => clearInterval(timer);
   }, [active, job?.startedAt]);
 
-  async function handleStart() {
+  async function triggerIndex(options: { retryFailed?: boolean } = {}) {
     setStarting(true);
     try {
       const res = await fetch(`/api/repos/${repoId}/index`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trigger: 'manual' }),
+        body: JSON.stringify({ trigger: 'manual', ...options }),
       });
       if (res.status === 409) {
         toast.error('Indexing is already in progress');
         return;
       }
       if (!res.ok) {
-        toast.error('Failed to start indexing');
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error ?? 'Failed to start indexing');
         return;
       }
-      toast.success('Indexing started');
+      toast.success(options.retryFailed ? 'Retrying failed files' : 'Indexing started');
     } catch {
       toast.error('Failed to start indexing');
     } finally {
@@ -106,6 +113,8 @@ export function IndexingTab({ repoId, initialJob }: IndexingTabProps) {
     }
   }
 
+  const canRetryFailed = !active && job?.status === 'partial' && job.failedFiles > 0;
+
   const percentage = job && job.totalFiles > 0
     ? Math.round((job.processedFiles / job.totalFiles) * 100)
     : 0;
@@ -121,10 +130,36 @@ export function IndexingTab({ repoId, initialJob }: IndexingTabProps) {
           />
         </div>
         {!active && (
-          <Button onClick={handleStart} disabled={starting} size="sm">
-            <Play className="size-3.5" />
-            {starting ? 'Starting...' : 'Start Indexing'}
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button onClick={() => triggerIndex()} disabled={starting} size="sm">
+              <Play className="size-3.5" />
+              {starting ? 'Starting...' : 'Start Indexing'}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="inline-flex h-8 items-center justify-center rounded-md border bg-background px-1.5 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+                disabled={starting}
+              >
+                <ChevronDown className="size-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => triggerIndex()}>
+                  <Play className="size-3.5" />
+                  Start Indexing
+                </DropdownMenuItem>
+                {canRetryFailed && (
+                  <DropdownMenuItem onClick={() => triggerIndex({ retryFailed: true })}>
+                    <RotateCcw className="size-3.5" />
+                    Retry Failed ({job?.failedFiles})
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => triggerIndex()}>
+                  <RefreshCw className="size-3.5" />
+                  Full Re-index
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )}
         {active && (
           <Button variant="destructive" onClick={handleCancel} disabled={cancelling} size="sm">
