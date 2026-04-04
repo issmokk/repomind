@@ -57,6 +57,7 @@ export function TreeView({ edges, repoName, selectedNodeId, onSelect }: TreeView
     return flattenTree([tree], expandedIds)
   }, [tree, expandedIds])
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: flatItems.length,
     getScrollElement: () => scrollRef.current,
