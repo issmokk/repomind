@@ -5,6 +5,7 @@ export type RepoIndexEventData = {
   jobId: string
   triggerType: 'manual' | 'webhook' | 'install'
   changedFiles?: string[]
+  retryFiles?: string[]
 }
 
 const repoIndexEvent = eventType('repo/index')

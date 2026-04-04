@@ -25,7 +25,7 @@ export const indexRepoFunction = inngest.createFunction(
     triggers: [{ event: 'repo/index' }],
   },
   async ({ event, step }) => {
-    const { repoId, jobId, triggerType } = event.data as RepoIndexEventData
+    const { repoId, jobId, triggerType, retryFiles } = event.data as RepoIndexEventData
 
     const initResult = await step.run('initialize', async () => {
       const storage = new SupabaseStorageProvider()
@@ -43,9 +43,7 @@ export const indexRepoFunction = inngest.createFunction(
       let filesToProcess: FileToProcess[]
       let headCommitSha: string = headBranch
 
-      const useFullIndex = !repo.lastIndexedCommit || triggerType === 'manual'
-      if (useFullIndex) {
-        await storage.bulkInvalidateCache(repoId)
+      if (retryFiles && retryFiles.length > 0) {
         await storage.updateJobStatus(jobId, 'fetching_files')
 
         const fileTree = await ghClient.getFileTree(owner, repoName, headBranch)
@@ -53,24 +51,40 @@ export const indexRepoFunction = inngest.createFunction(
           headCommitSha = fileTree[0].sha
         }
 
+        const retrySet = new Set(retryFiles)
         filesToProcess = fileTree
-          .filter((entry) => shouldIndexFile(entry.path, undefined, { sizeBytes: entry.size }).index)
-          .map((entry) => ({ path: entry.path, sha: entry.sha, status: 'added' as const }))
+          .filter((entry) => retrySet.has(entry.path))
+          .map((entry) => ({ path: entry.path, sha: entry.sha, status: 'modified' as const }))
       } else {
-        await storage.updateJobStatus(jobId, 'fetching_files')
+        const useFullIndex = !repo.lastIndexedCommit || triggerType === 'manual'
+        if (useFullIndex) {
+          await storage.bulkInvalidateCache(repoId)
+          await storage.updateJobStatus(jobId, 'fetching_files')
 
-        const diff = await ghClient.compareCommits(owner, repoName, repo.lastIndexedCommit!, headBranch)
-        filesToProcess = diff
-          .filter((entry) => {
-            if (entry.status === 'removed') return true
-            return shouldIndexFile(entry.filename, undefined, { sizeBytes: 0 }).index
-          })
-          .map((entry) => ({
-            path: entry.filename,
-            sha: entry.sha,
-            status: entry.status,
-            previousPath: entry.previousFilename,
-          }))
+          const fileTree = await ghClient.getFileTree(owner, repoName, headBranch)
+          if (fileTree.length > 0 && fileTree[0].sha) {
+            headCommitSha = fileTree[0].sha
+          }
+
+          filesToProcess = fileTree
+            .filter((entry) => shouldIndexFile(entry.path, undefined, { sizeBytes: entry.size }).index)
+            .map((entry) => ({ path: entry.path, sha: entry.sha, status: 'added' as const }))
+        } else {
+          await storage.updateJobStatus(jobId, 'fetching_files')
+
+          const diff = await ghClient.compareCommits(owner, repoName, repo.lastIndexedCommit!, headBranch)
+          filesToProcess = diff
+            .filter((entry) => {
+              if (entry.status === 'removed') return true
+              return shouldIndexFile(entry.filename, undefined, { sizeBytes: 0 }).index
+            })
+            .map((entry) => ({
+              path: entry.filename,
+              sha: entry.sha,
+              status: entry.status,
+              previousPath: entry.previousFilename,
+            }))
+        }
       }
 
       await storage.updateJobStatus(jobId, 'processing', {

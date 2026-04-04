@@ -43,6 +43,21 @@ export async function POST(
 
   const body = await request.json().catch(() => ({}))
   const triggerType = body.trigger === 'git_diff' ? 'webhook' : 'manual'
+  const retryFailed = body.retryFailed === true
+
+  let retryFiles: string[] | undefined
+  if (retryFailed) {
+    const latestJob = await ctx.storage.getLatestJob(id, ctx.supabase)
+    if (!latestJob || latestJob.status !== 'partial' || latestJob.failedFiles === 0) {
+      return NextResponse.json({ error: 'No partial job with failed files to retry' }, { status: 400 })
+    }
+    retryFiles = latestJob.errorLog
+      .filter((entry) => entry.file)
+      .map((entry) => entry.file!)
+    if (retryFiles.length === 0) {
+      return NextResponse.json({ error: 'No failed file paths found in error log' }, { status: 400 })
+    }
+  }
 
   const job = await ctx.storage.createJob({
     repoId: id,
@@ -58,6 +73,7 @@ export async function POST(
         repoId: id,
         jobId: job.id,
         triggerType: triggerType as 'manual' | 'webhook',
+        ...(retryFiles && { retryFiles }),
       },
     })
   } catch (err) {
