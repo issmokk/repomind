@@ -40,6 +40,9 @@ supabase/.temp/
 # WASM grammar files (downloaded, not committed)
 wasm/*.wasm
 
+# claude code worktrees
+.claude/
+
 # vercel
 .vercel
 
