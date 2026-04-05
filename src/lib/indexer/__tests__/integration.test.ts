@@ -67,7 +67,7 @@ function createInMemoryStorage(): Record<string, unknown> & { _state: StorageSta
         id: `job-${Object.keys(state.jobs).length + 1}`, repoId: data.repoId as string,
         status: 'pending', triggerType: data.triggerType as 'manual',
         fromCommit: (data.fromCommit as string) ?? null, toCommit: (data.toCommit as string) ?? 'main',
-        totalFiles: 0, processedFiles: 0, failedFiles: 0, currentFile: null, errorLog: [],
+        totalFiles: 0, processedFiles: 0, failedFiles: 0, currentFile: null, currentStage: null, errorLog: [],
         lastHeartbeatAt: new Date().toISOString(), startedAt: new Date().toISOString(), completedAt: null,
       }
       state.jobs[job.id] = job
@@ -308,7 +308,7 @@ describe('Integration: Full Indexing Pipeline', () => {
       storage._state.jobs['stale-job'] = {
         id: 'stale-job', repoId: 'repo-1', status: 'processing', triggerType: 'manual',
         fromCommit: null, toCommit: 'main', totalFiles: 10, processedFiles: 3,
-        failedFiles: 0, currentFile: null, errorLog: [],
+        failedFiles: 0, currentFile: null, currentStage: null, errorLog: [],
         lastHeartbeatAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
         startedAt: '2026-01-01', completedAt: null,
       }
@@ -326,7 +326,7 @@ describe('Integration: Full Indexing Pipeline', () => {
       storage._state.jobs['stale-job'] = {
         id: 'stale-job', repoId: 'repo-1', status: 'processing', triggerType: 'manual',
         fromCommit: null, toCommit: 'main', totalFiles: 10, processedFiles: 3,
-        failedFiles: 0, currentFile: null, errorLog: [],
+        failedFiles: 0, currentFile: null, currentStage: null, errorLog: [],
         lastHeartbeatAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
         startedAt: '2026-01-01', completedAt: null,
       }
@@ -345,7 +345,7 @@ describe('Integration: Full Indexing Pipeline', () => {
       storage._state.jobs['active-job'] = {
         id: 'active-job', repoId: 'repo-1', status: 'processing', triggerType: 'manual',
         fromCommit: null, toCommit: 'main', totalFiles: 5, processedFiles: 2,
-        failedFiles: 0, currentFile: null, errorLog: [],
+        failedFiles: 0, currentFile: null, currentStage: null, errorLog: [],
         lastHeartbeatAt: new Date().toISOString(), startedAt: '2026-01-01', completedAt: null,
       }
 

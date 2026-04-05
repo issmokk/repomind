@@ -302,7 +302,7 @@ describe('SupabaseStorageProvider', () => {
       const staleJob: IndexingJob = {
         id: 'job-1', repoId: 'repo-1', status: 'processing', triggerType: 'manual',
         fromCommit: null, toCommit: 'abc', totalFiles: 10, processedFiles: 3,
-        failedFiles: 0, currentFile: 'src/x.ts', errorLog: [],
+        failedFiles: 0, currentFile: 'src/x.ts', currentStage: null, errorLog: [],
         lastHeartbeatAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
         startedAt: '2026-01-01', completedAt: null,
       }
@@ -314,7 +314,7 @@ describe('SupabaseStorageProvider', () => {
       const freshJob: IndexingJob = {
         id: 'job-1', repoId: 'repo-1', status: 'processing', triggerType: 'manual',
         fromCommit: null, toCommit: 'abc', totalFiles: 10, processedFiles: 3,
-        failedFiles: 0, currentFile: 'src/x.ts', errorLog: [],
+        failedFiles: 0, currentFile: 'src/x.ts', currentStage: null, errorLog: [],
         lastHeartbeatAt: new Date().toISOString(),
         startedAt: '2026-01-01', completedAt: null,
       }
@@ -326,7 +326,7 @@ describe('SupabaseStorageProvider', () => {
       const noHeartbeatJob: IndexingJob = {
         id: 'job-1', repoId: 'repo-1', status: 'processing', triggerType: 'manual',
         fromCommit: null, toCommit: 'abc', totalFiles: 10, processedFiles: 0,
-        failedFiles: 0, currentFile: null, errorLog: [],
+        failedFiles: 0, currentFile: null, currentStage: null, errorLog: [],
         lastHeartbeatAt: null as unknown as string,
         startedAt: '2026-01-01', completedAt: null,
       }

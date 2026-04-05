@@ -14,9 +14,16 @@ import {
 import { StatusBadge } from '@/components/shared/status-badge';
 import { mapJobStatus } from '@/lib/status-utils';
 import { useIndexingStatus } from '@/hooks/use-indexing-status';
-import type { IndexingJob } from '@/types/indexing';
+import type { IndexingJob, PipelineStage } from '@/types/indexing';
 
 const ACTIVE_STATUSES = ['pending', 'fetching_files', 'processing', 'embedding'] as const;
+
+const PIPELINE_STAGES: { key: PipelineStage; label: string }[] = [
+  { key: 'fetching_content', label: 'Fetch' },
+  { key: 'parsing', label: 'Parse' },
+  { key: 'embedding', label: 'Embed' },
+  { key: 'storing', label: 'Store' },
+];
 
 function isActive(status: string): boolean {
   return (ACTIVE_STATUSES as readonly string[]).includes(status);
@@ -215,6 +222,30 @@ export function IndexingTab({ repoId, initialJob, hasLastIndexedCommit = false }
                 <span className="text-xs text-muted-foreground font-mono">{elapsed}</span>
               )}
             </div>
+
+            {job.currentStage && (
+              <div className="flex items-center gap-1">
+                {PIPELINE_STAGES.map((stage, i) => {
+                  const currentIdx = PIPELINE_STAGES.findIndex((s) => s.key === job.currentStage);
+                  const isComplete = i < currentIdx;
+                  const isCurrent = i === currentIdx;
+                  return (
+                    <div key={stage.key} className="flex items-center gap-1">
+                      {i > 0 && (
+                        <div className={`h-px w-3 ${isComplete || isCurrent ? 'bg-blue-500' : 'bg-muted-foreground/30'}`} />
+                      )}
+                      <span
+                        className={`text-[11px] font-medium ${
+                          isCurrent ? 'text-blue-500' : isComplete ? 'text-muted-foreground' : 'text-muted-foreground/40'
+                        }`}
+                      >
+                        {stage.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs">
