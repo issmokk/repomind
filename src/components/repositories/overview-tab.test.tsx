@@ -14,6 +14,28 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
+vi.mock('./freshness-indicator', () => ({
+  FreshnessIndicator: ({ repoId, lastIndexedCommit }: { repoId: string; lastIndexedCommit: string | null }) => (
+    <div data-testid="freshness-indicator" data-repo-id={repoId}>
+      {lastIndexedCommit ? lastIndexedCommit.slice(0, 7) : 'Not indexed'}
+    </div>
+  ),
+}));
+
+let mockSWRData: { behind: number | null } | undefined = undefined;
+vi.mock('swr', async () => {
+  const actual = await vi.importActual<typeof import('swr')>('swr');
+  return {
+    ...actual,
+    default: vi.fn((key: string | null) => {
+      if (key && key.includes('/freshness')) {
+        return { data: mockSWRData, isLoading: false, isValidating: false, mutate: vi.fn() };
+      }
+      return { data: undefined, isLoading: false, isValidating: false, mutate: vi.fn() };
+    }),
+  };
+});
+
 function makeRepo(overrides: Partial<Repository> = {}): Repository {
   return {
     id: 'repo-1',
@@ -60,6 +82,7 @@ const defaultProps = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockSWRData = undefined;
   global.fetch = vi.fn(() =>
     Promise.resolve(new Response(JSON.stringify({ success: true }), { status: 200 })),
   ) as unknown as typeof fetch;
@@ -78,7 +101,13 @@ describe('OverviewTab', () => {
     render(<OverviewTab {...defaultProps} />);
     expect(screen.getByText('42')).toBeInTheDocument();
     expect(screen.getByText('120')).toBeInTheDocument();
-    expect(screen.getByText('abc1234')).toBeInTheDocument();
+  });
+
+  it('renders the freshness indicator', () => {
+    render(<OverviewTab {...defaultProps} />);
+    const indicator = screen.getByTestId('freshness-indicator');
+    expect(indicator).toBeInTheDocument();
+    expect(indicator).toHaveAttribute('data-repo-id', 'repo-1');
   });
 
   it('re-index button calls POST /api/repos/:id/index', async () => {
@@ -119,8 +148,44 @@ describe('OverviewTab', () => {
     expect(push).toHaveBeenCalledWith('/repositories');
   });
 
-  it('shows "Never" when lastIndexedCommit is null', () => {
-    render(<OverviewTab {...defaultProps} repo={makeRepo({ lastIndexedCommit: null })} />);
-    expect(screen.getByText('Never')).toBeInTheDocument();
+  it('shows "Update Index" button when commits behind', () => {
+    mockSWRData = { behind: 5 };
+    render(<OverviewTab {...defaultProps} />);
+    expect(screen.getByRole('button', { name: /update index/i })).toBeInTheDocument();
+    expect(screen.getByText(/5 commits behind/)).toBeInTheDocument();
+  });
+
+  it('does not show "Update Index" button when up to date', () => {
+    mockSWRData = { behind: 0 };
+    render(<OverviewTab {...defaultProps} />);
+    expect(screen.queryByRole('button', { name: /update index/i })).not.toBeInTheDocument();
+  });
+
+  it('does not show "Update Index" button when freshness unknown', () => {
+    mockSWRData = undefined;
+    render(<OverviewTab {...defaultProps} />);
+    expect(screen.queryByRole('button', { name: /update index/i })).not.toBeInTheDocument();
+  });
+
+  it('"Update Index" button triggers re-index', async () => {
+    mockSWRData = { behind: 3 };
+    const user = userEvent.setup();
+    const mutateJob = vi.fn();
+    render(<OverviewTab {...defaultProps} mutateJob={mutateJob} />);
+
+    await user.click(screen.getByRole('button', { name: /update index/i }));
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/repos/repo-1/index',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(mutateJob).toHaveBeenCalled();
+  });
+
+  it('uses singular "commit" for 1 behind', () => {
+    mockSWRData = { behind: 1 };
+    render(<OverviewTab {...defaultProps} />);
+    expect(screen.getByText(/1 commit behind/)).toBeInTheDocument();
+    expect(screen.queryByText(/1 commits behind/)).not.toBeInTheDocument();
   });
 });

@@ -97,6 +97,49 @@ describe('GitHubClient', () => {
     expect(result[4].status).toBe('modified')
   })
 
+  it('getCommitsBehind returns commit count and head SHA', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(
+      mockFetchResponse({
+        ahead_by: 3,
+        commits: [
+          { sha: 'commit-1' },
+          { sha: 'commit-2' },
+          { sha: 'commit-3' },
+        ],
+      }),
+    )))
+
+    const result = await client.getCommitsBehind('owner', 'repo', 'abc123', 'main')
+    expect(result.behind).toBe(3)
+    expect(result.headSha).toBe('commit-3')
+  })
+
+  it('getCommitsBehind returns base SHA when no commits ahead', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(
+      mockFetchResponse({
+        ahead_by: 0,
+        commits: [],
+      }),
+    )))
+
+    const result = await client.getCommitsBehind('owner', 'repo', 'abc123', 'main')
+    expect(result.behind).toBe(0)
+    expect(result.headSha).toBe('abc123')
+  })
+
+  it('getCommitsBehind calls correct compare URL', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(
+      mockFetchResponse({ ahead_by: 1, commits: [{ sha: 'head-sha' }] }),
+    ))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await client.getCommitsBehind('owner', 'repo', 'base-sha', 'main')
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.github.com/repos/owner/repo/compare/base-sha...main',
+      expect.any(Object),
+    )
+  })
+
   it('404 response throws descriptive error', async () => {
     vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(
       mockFetchResponse({ message: 'Not Found' }, 404),

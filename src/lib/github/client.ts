@@ -60,6 +60,22 @@ export class GitHubClient {
     return { content, sha: data.sha, size: data.size, encoding: 'utf-8' }
   }
 
+  async getCommitsBehind(
+    owner: string,
+    repo: string,
+    base: string,
+    head: string,
+  ): Promise<{ behind: number; headSha: string }> {
+    const data = await this.request<{
+      ahead_by: number
+      commits: Array<{ sha: string }>
+    }>(`/repos/${owner}/${repo}/compare/${base}...${head}`)
+    return {
+      behind: data.ahead_by,
+      headSha: data.commits.length > 0 ? data.commits[data.commits.length - 1].sha : base,
+    }
+  }
+
   async compareCommits(
     owner: string,
     repo: string,
