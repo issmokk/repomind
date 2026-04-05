@@ -108,20 +108,64 @@ export class GitHubClient {
     )
   }
 
+  async listWebhooks(
+    owner: string,
+    repo: string,
+  ): Promise<Array<{ id: number; config: { url?: string }; events: string[]; active: boolean }>> {
+    return this.request(`/repos/${owner}/${repo}/hooks`)
+  }
+
+  async createWebhook(
+    owner: string,
+    repo: string,
+    webhookUrl: string,
+    secret: string,
+    events: string[] = ['push'],
+  ): Promise<{ id: number; config: { url?: string }; events: string[]; active: boolean }> {
+    return this.request(`/repos/${owner}/${repo}/hooks`, {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'web',
+        config: {
+          url: webhookUrl,
+          content_type: 'json',
+          secret,
+          insecure_ssl: '0',
+        },
+        events,
+        active: true,
+      }),
+    })
+  }
+
+  async deleteWebhook(owner: string, repo: string, hookId: number): Promise<void> {
+    await this.request(`/repos/${owner}/${repo}/hooks/${hookId}`, { method: 'DELETE', expectEmpty: true })
+  }
+
   private async getBlob(owner: string, repo: string, sha: string): Promise<FileContent> {
     const data = await this.request<{ content: string; sha: string; size: number }>(`/repos/${owner}/${repo}/git/blobs/${sha}`)
     const content = Buffer.from(data.content, 'base64').toString('utf-8')
     return { content, sha: data.sha, size: data.size, encoding: 'utf-8' }
   }
 
-  private async request<T = unknown>(path: string): Promise<T> {
+  private async request<T = unknown>(
+    path: string,
+    options?: { method?: string; body?: string; expectEmpty?: boolean },
+  ): Promise<T> {
     const headers = await this.auth.getHeaders()
     const url = `${this.baseUrl}${path}`
+    const method = options?.method ?? 'GET'
+
+    if (options?.body) {
+      ;(headers as Record<string, string>)['Content-Type'] = 'application/json'
+    }
 
     let response: Response
     try {
       response = await fetch(url, {
+        method,
         headers,
+        body: options?.body,
         signal: AbortSignal.timeout(30_000),
       })
     } catch (err) {
@@ -143,6 +187,10 @@ export class GitHubClient {
         throw new Error(`File too large for Contents API: ${body} (403)`)
       }
       throw new Error(`GitHub API error ${response.status}: ${body}`)
+    }
+
+    if (options?.expectEmpty || response.status === 204) {
+      return undefined as T
     }
 
     const data = await response.json()

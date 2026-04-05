@@ -42,7 +42,7 @@ export function RepoDetailTabs({
       </TabsContent>
       <TabsContent value="settings">
         {settings ? (
-          <SettingsTab repoId={repo.id} settings={settings} mutateSettings={mutateSettings} />
+          <SettingsTab repoId={repo.id} fullName={repo.fullName} githubAuthType={repo.githubAuthType} settings={settings} mutateSettings={mutateSettings} />
         ) : (
           <p className="py-4 text-sm text-muted-foreground">No settings configured yet. Settings will be created when indexing starts.</p>
         )}
