@@ -16,7 +16,8 @@ const STORAGE_KEY = 'repo-view-mode';
 interface RepoListProps {
   repos: RepoWithStatus[];
   isLoading: boolean;
-  onAdd: (fullName: string) => Promise<void>;
+  onAdd: (fullName: string) => Promise<string>;
+  onTriggerIndex: (repoId: string) => Promise<void>;
   onReindex: (id: string) => void;
   onDelete: (id: string) => void;
 }
@@ -27,7 +28,7 @@ function getInitialViewMode(): ViewMode {
   return stored === 'grid' || stored === 'list' ? stored : 'grid';
 }
 
-export function RepoList({ repos, isLoading, onAdd, onReindex, onDelete }: RepoListProps) {
+export function RepoList({ repos, isLoading, onAdd, onTriggerIndex, onReindex, onDelete }: RepoListProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(getInitialViewMode);
 
   function toggleView(mode: ViewMode) {
@@ -55,7 +56,7 @@ export function RepoList({ repos, isLoading, onAdd, onReindex, onDelete }: RepoL
       <div>
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-lg font-medium">Repositories</h1>
-          <AddRepoDialog onAdd={onAdd} />
+          <AddRepoDialog onAdd={onAdd} onTriggerIndex={onTriggerIndex} />
         </div>
         <EmptyState
           icon={FolderGit2}
@@ -89,7 +90,7 @@ export function RepoList({ repos, isLoading, onAdd, onReindex, onDelete }: RepoL
               <List className="size-3.5" />
             </Button>
           </div>
-          <AddRepoDialog onAdd={onAdd} />
+          <AddRepoDialog onAdd={onAdd} onTriggerIndex={onTriggerIndex} />
         </div>
       </div>
       <div

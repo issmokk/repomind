@@ -25,14 +25,21 @@ function Wrapper({ children }: { children: ReactNode }) {
   );
 }
 
+const defaultProps = {
+  onAdd: vi.fn().mockResolvedValue('repo-123'),
+  onTriggerIndex: vi.fn().mockResolvedValue(undefined),
+};
+
 beforeEach(() => {
   vi.restoreAllMocks();
+  defaultProps.onAdd = vi.fn().mockResolvedValue('repo-123');
+  defaultProps.onTriggerIndex = vi.fn().mockResolvedValue(undefined);
 });
 
 describe('AddRepoDialog', () => {
   it('dialog opens when trigger button is clicked', async () => {
     const user = userEvent.setup();
-    render(<AddRepoDialog onAdd={vi.fn().mockResolvedValue(undefined)} />, { wrapper: Wrapper });
+    render(<AddRepoDialog {...defaultProps} />, { wrapper: Wrapper });
 
     await user.click(screen.getByText('Add Repository'));
     expect(screen.getByText('GitHub')).toBeInTheDocument();
@@ -40,7 +47,7 @@ describe('AddRepoDialog', () => {
 
   it('renders two tabs: GitHub and Manual', async () => {
     const user = userEvent.setup();
-    render(<AddRepoDialog onAdd={vi.fn().mockResolvedValue(undefined)} />, { wrapper: Wrapper });
+    render(<AddRepoDialog {...defaultProps} />, { wrapper: Wrapper });
 
     await user.click(screen.getByText('Add Repository'));
     expect(screen.getByRole('tab', { name: 'GitHub' })).toBeInTheDocument();
@@ -49,7 +56,7 @@ describe('AddRepoDialog', () => {
 
   it('GitHub tab is active by default', async () => {
     const user = userEvent.setup();
-    render(<AddRepoDialog onAdd={vi.fn().mockResolvedValue(undefined)} />, { wrapper: Wrapper });
+    render(<AddRepoDialog {...defaultProps} />, { wrapper: Wrapper });
 
     await user.click(screen.getByText('Add Repository'));
     expect(screen.getByTestId('github-picker')).toBeInTheDocument();
@@ -57,7 +64,7 @@ describe('AddRepoDialog', () => {
 
   it('Manual tab renders text input for owner/repo', async () => {
     const user = userEvent.setup();
-    render(<AddRepoDialog onAdd={vi.fn().mockResolvedValue(undefined)} />, { wrapper: Wrapper });
+    render(<AddRepoDialog {...defaultProps} />, { wrapper: Wrapper });
 
     await user.click(screen.getByText('Add Repository'));
     await user.click(screen.getByRole('tab', { name: 'Manual' }));
@@ -66,7 +73,7 @@ describe('AddRepoDialog', () => {
 
   it('Manual tab validates owner/repo format', async () => {
     const user = userEvent.setup();
-    render(<AddRepoDialog onAdd={vi.fn().mockResolvedValue(undefined)} />, { wrapper: Wrapper });
+    render(<AddRepoDialog {...defaultProps} />, { wrapper: Wrapper });
 
     await user.click(screen.getByText('Add Repository'));
     await user.click(screen.getByRole('tab', { name: 'Manual' }));
@@ -79,8 +86,7 @@ describe('AddRepoDialog', () => {
 
   it('adding a repo via manual tab calls onAdd with fullName', async () => {
     const user = userEvent.setup();
-    const onAdd = vi.fn().mockResolvedValue(undefined);
-    render(<AddRepoDialog onAdd={onAdd} />, { wrapper: Wrapper });
+    render(<AddRepoDialog {...defaultProps} />, { wrapper: Wrapper });
 
     await user.click(screen.getByText('Add Repository'));
     await user.click(screen.getByRole('tab', { name: 'Manual' }));
@@ -89,29 +95,65 @@ describe('AddRepoDialog', () => {
     await user.type(input, 'facebook/react');
     await user.click(screen.getByRole('button', { name: 'Add' }));
 
-    expect(onAdd).toHaveBeenCalledWith('facebook/react');
+    expect(defaultProps.onAdd).toHaveBeenCalledWith('facebook/react');
   });
 
   it('dialog closes after successful add', async () => {
     const user = userEvent.setup();
-    const onAdd = vi.fn().mockResolvedValue(undefined);
-    render(<AddRepoDialog onAdd={onAdd} />, { wrapper: Wrapper });
+    render(<AddRepoDialog {...defaultProps} />, { wrapper: Wrapper });
 
     await user.click(screen.getByText('Add Repository'));
     await user.click(screen.getByTestId('github-picker'));
 
-    expect(onAdd).toHaveBeenCalledWith('gh/repo');
+    expect(defaultProps.onAdd).toHaveBeenCalledWith('gh/repo');
   });
 
-  it('success toast is shown after adding a repo', async () => {
+  it('shows "Start indexing immediately" checkbox, checked by default', async () => {
+    const user = userEvent.setup();
+    render(<AddRepoDialog {...defaultProps} />, { wrapper: Wrapper });
+
+    await user.click(screen.getByText('Add Repository'));
+    expect(screen.getByText('Start indexing immediately')).toBeInTheDocument();
+    const checkbox = screen.getByRole('checkbox', { name: 'Start indexing immediately' });
+    expect(checkbox).toHaveAttribute('data-checked', '');
+  });
+
+  it('triggers indexing after adding when checkbox is checked', async () => {
     const user = userEvent.setup();
     const { toast } = await import('sonner');
-    const onAdd = vi.fn().mockResolvedValue(undefined);
-    render(<AddRepoDialog onAdd={onAdd} />, { wrapper: Wrapper });
+    render(<AddRepoDialog {...defaultProps} />, { wrapper: Wrapper });
 
     await user.click(screen.getByText('Add Repository'));
     await user.click(screen.getByTestId('github-picker'));
 
+    expect(defaultProps.onTriggerIndex).toHaveBeenCalledWith('repo-123');
+    expect(toast.success).toHaveBeenCalledWith('Repository added. Indexing started.');
+  });
+
+  it('does not trigger indexing when checkbox is unchecked', async () => {
+    const user = userEvent.setup();
+    const { toast } = await import('sonner');
+    render(<AddRepoDialog {...defaultProps} />, { wrapper: Wrapper });
+
+    await user.click(screen.getByText('Add Repository'));
+    await user.click(screen.getByRole('checkbox', { name: 'Start indexing immediately' }));
+    await user.click(screen.getByTestId('github-picker'));
+
+    expect(defaultProps.onTriggerIndex).not.toHaveBeenCalled();
     expect(toast.success).toHaveBeenCalledWith('Repository added');
+  });
+
+  it('shows warning toast if indexing fails to start', async () => {
+    const user = userEvent.setup();
+    const { toast } = await import('sonner');
+    defaultProps.onTriggerIndex = vi.fn().mockRejectedValue(new Error('fail'));
+    render(<AddRepoDialog {...defaultProps} />, { wrapper: Wrapper });
+
+    await user.click(screen.getByText('Add Repository'));
+    await user.click(screen.getByTestId('github-picker'));
+
+    expect(toast.success).toHaveBeenCalledWith(
+      'Repository added, but indexing failed to start. You can trigger it manually.',
+    );
   });
 });

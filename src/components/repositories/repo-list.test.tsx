@@ -45,7 +45,8 @@ const mockRepos: RepoWithStatus[] = [
 const defaultProps = {
   repos: mockRepos,
   isLoading: false,
-  onAdd: vi.fn().mockResolvedValue(undefined),
+  onAdd: vi.fn().mockResolvedValue('repo-123'),
+  onTriggerIndex: vi.fn().mockResolvedValue(undefined),
   onReindex: vi.fn(),
   onDelete: vi.fn(),
 };

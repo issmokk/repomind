@@ -11,22 +11,35 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { GitHubRepoPicker } from './github-repo-picker';
 import { ManualRepoInput } from './manual-repo-input';
 
 interface AddRepoDialogProps {
-  onAdd: (fullName: string) => Promise<void>;
+  onAdd: (fullName: string) => Promise<string>;
+  onTriggerIndex: (repoId: string) => Promise<void>;
 }
 
-export function AddRepoDialog({ onAdd }: AddRepoDialogProps) {
+export function AddRepoDialog({ onAdd, onTriggerIndex }: AddRepoDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [autoIndex, setAutoIndex] = useState(true);
 
   async function handleAdd(fullName: string) {
     setLoading(true);
     try {
-      await onAdd(fullName);
-      toast.success('Repository added');
+      const repoId = await onAdd(fullName);
+      if (autoIndex) {
+        try {
+          await onTriggerIndex(repoId);
+          toast.success('Repository added. Indexing started.');
+        } catch {
+          toast.success('Repository added, but indexing failed to start. You can trigger it manually.');
+        }
+      } else {
+        toast.success('Repository added');
+      }
       setOpen(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add repository');
@@ -59,6 +72,16 @@ export function AddRepoDialog({ onAdd }: AddRepoDialogProps) {
             <ManualRepoInput onSubmit={handleAdd} loading={loading} />
           </TabsContent>
         </Tabs>
+        <div className="flex items-center gap-2 pt-2 border-t">
+          <Checkbox
+            id="auto-index"
+            checked={autoIndex}
+            onCheckedChange={(checked) => setAutoIndex(checked === true)}
+          />
+          <Label htmlFor="auto-index" className="text-sm cursor-pointer">
+            Start indexing immediately
+          </Label>
+        </div>
       </DialogContent>
     </Dialog>
   );

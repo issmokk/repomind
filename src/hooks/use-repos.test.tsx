@@ -58,13 +58,35 @@ describe('useRepos', () => {
     fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(newRepo), { status: 200 }));
     fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify([...mockRepos, newRepo]), { status: 200 }));
 
-    await act(() => result.current.addRepo('owner/repo3'));
+    let repoId: string | undefined;
+    await act(async () => {
+      repoId = await result.current.addRepo('owner/repo3');
+    });
 
+    expect(repoId).toBe('3');
     const postCall = fetchSpy.mock.calls.find(
       (call) => call[1] && (call[1] as RequestInit).method === 'POST',
     );
     expect(postCall).toBeDefined();
     expect(postCall![0]).toBe('/api/repos');
+  });
+
+  it('triggerIndex calls POST /api/repos/:id/index', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(mockRepos), { status: 200 }));
+
+    const { result } = renderHook(() => useRepos(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ jobId: 'j1', status: 'pending' }), { status: 200 }));
+
+    await act(() => result.current.triggerIndex('1'));
+
+    const indexCall = fetchSpy.mock.calls.find(
+      (call) => typeof call[0] === 'string' && call[0].includes('/index'),
+    );
+    expect(indexCall).toBeDefined();
+    expect(indexCall![0]).toBe('/api/repos/1/index');
   });
 
   it('deleteRepo calls DELETE /api/repos/:id and mutates the cache', async () => {
