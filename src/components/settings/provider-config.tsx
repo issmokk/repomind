@@ -18,6 +18,7 @@ const PROVIDER_FIELDS: Record<string, Array<{ key: string; label: string; type: 
   ollama: [
     { key: 'ollamaBaseUrl', label: 'Base URL', type: 'text', placeholder: 'http://localhost:11434' },
     { key: 'ollamaLlmModel', label: 'LLM Model', type: 'text', placeholder: 'qwen2.5-coder:32b' },
+    { key: 'ollamaModel', label: 'Embedding Model', type: 'text', placeholder: 'rjmalagon/gte-qwen2-1.5b-instruct-embed-f16' },
   ],
   claude: [
     { key: 'claudeApiKey', label: 'API Key', type: 'password', placeholder: 'sk-ant-...' },
@@ -26,10 +27,12 @@ const PROVIDER_FIELDS: Record<string, Array<{ key: string; label: string; type: 
   openai: [
     { key: 'openaiApiKey', label: 'API Key', type: 'password', placeholder: 'sk-...' },
     { key: 'openaiLlmModel', label: 'LLM Model', type: 'text', placeholder: 'gpt-4o' },
+    { key: 'openaiModel', label: 'Embedding Model', type: 'text', placeholder: 'text-embedding-3-small' },
   ],
   gemini: [
     { key: 'geminiApiKey', label: 'API Key', type: 'password', placeholder: 'AIzaSy...' },
     { key: 'geminiModel', label: 'LLM Model', type: 'text', placeholder: 'gemini-2.5-flash' },
+    { key: 'geminiEmbeddingModel', label: 'Embedding Model', type: 'text', placeholder: 'gemini-embedding-001' },
   ],
   cohere: [
     { key: 'cohereApiKey', label: 'API Key', type: 'password', placeholder: 'API key (optional, for re-ranking)' },
