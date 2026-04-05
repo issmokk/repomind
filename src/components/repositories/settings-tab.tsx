@@ -6,8 +6,9 @@ import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { IndexingMethod, RepositorySettings, RepositorySettingsUpdate } from '@/types/repository';
+import type { GitHubAuthType, IndexingMethod, RepositorySettings, RepositorySettingsUpdate } from '@/types/repository';
 import type { KeyedMutator } from 'swr';
+import { WebhookSetupGuide } from './webhook-setup-guide';
 
 const INDEXING_METHODS = [
   { value: 'webhook', label: 'Webhook', description: 'Real-time updates. Triggers on every push. Requires GitHub webhook setup.' },
@@ -18,11 +19,13 @@ const INDEXING_METHODS = [
 
 interface SettingsTabProps {
   repoId: string;
+  fullName: string;
+  githubAuthType: GitHubAuthType;
   settings: RepositorySettings;
   mutateSettings: KeyedMutator<RepositorySettings | null>;
 }
 
-export function SettingsTab({ repoId, settings, mutateSettings }: SettingsTabProps) {
+export function SettingsTab({ repoId, fullName, githubAuthType, settings, mutateSettings }: SettingsTabProps) {
   const [indexingMethod, setIndexingMethod] = useState<IndexingMethod>(settings.indexingMethod);
   const [branchFilter, setBranchFilter] = useState<string[]>(settings.branchFilter);
   const [branchInput, setBranchInput] = useState('');
@@ -162,6 +165,10 @@ export function SettingsTab({ repoId, settings, mutateSettings }: SettingsTabPro
           </div>
         </CardContent>
       </Card>
+
+      {indexingMethod === 'webhook' && (
+        <WebhookSetupGuide repoId={repoId} fullName={fullName} githubAuthType={githubAuthType} />
+      )}
 
       <Card>
         <CardContent className="space-y-4">

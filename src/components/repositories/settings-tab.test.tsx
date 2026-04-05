@@ -8,6 +8,10 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
+vi.mock('./webhook-setup-guide', () => ({
+  WebhookSetupGuide: () => <div data-testid="webhook-setup-guide">Webhook Guide</div>,
+}));
+
 function makeSettings(overrides: Partial<RepositorySettings> = {}): RepositorySettings {
   return {
     id: 'settings-1',
@@ -27,6 +31,8 @@ function makeSettings(overrides: Partial<RepositorySettings> = {}): RepositorySe
 
 const defaultProps = {
   repoId: 'repo-1',
+  fullName: 'owner/repo',
+  githubAuthType: 'pat' as const,
   settings: makeSettings(),
   mutateSettings: vi.fn(),
 };
@@ -106,6 +112,23 @@ describe('SettingsTab', () => {
     await user.click(screen.getByRole('button', { name: /save settings/i }));
 
     expect(toast.success).toHaveBeenCalledWith('Settings saved');
+  });
+
+  it('shows webhook setup guide when webhook method is selected', async () => {
+    const user = userEvent.setup();
+    render(<SettingsTab {...defaultProps} />);
+
+    expect(screen.queryByTestId('webhook-setup-guide')).not.toBeInTheDocument();
+
+    const webhookRadio = screen.getByDisplayValue('webhook');
+    await user.click(webhookRadio);
+
+    expect(screen.getByTestId('webhook-setup-guide')).toBeInTheDocument();
+  });
+
+  it('shows webhook setup guide on initial render when settings have webhook method', () => {
+    render(<SettingsTab {...defaultProps} settings={makeSettings({ indexingMethod: 'webhook' })} />);
+    expect(screen.getByTestId('webhook-setup-guide')).toBeInTheDocument();
   });
 
   it('form initializes with existing settings', () => {
