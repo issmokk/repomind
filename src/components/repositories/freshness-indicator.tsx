@@ -1,7 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
-import { GitCommit, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { GitCommit, AlertTriangle, CheckCircle2, CircleAlert } from 'lucide-react';
 import type { FreshnessResponse } from '@/app/api/repos/[id]/freshness/route';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -38,6 +38,21 @@ export function FreshnessIndicator({ repoId, lastIndexedCommit }: FreshnessIndic
       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
         <GitCommit className="size-4" />
         <span className="font-mono">{lastIndexedCommit.slice(0, 7)}</span>
+      </div>
+    );
+  }
+
+  if (data.stale) {
+    return (
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-1.5 text-sm">
+          <GitCommit className="size-4 text-muted-foreground" />
+          <span className="font-mono">{lastIndexedCommit!.slice(0, 7)}</span>
+        </div>
+        <div className="flex items-center gap-1 text-xs font-medium text-orange-600">
+          <CircleAlert className="size-3 text-orange-500" />
+          <span>Commit no longer exists, full re-index needed</span>
+        </div>
       </div>
     );
   }

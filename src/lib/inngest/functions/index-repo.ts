@@ -74,18 +74,37 @@ export const indexRepoFunction = inngest.createFunction(
         } else {
           await storage.updateJobStatus(jobId, 'fetching_files')
 
-          const diff = await ghClient.compareCommits(owner, repoName, repo.lastIndexedCommit!, headBranch)
-          filesToProcess = diff
-            .filter((entry) => {
-              if (entry.status === 'removed') return true
-              return shouldIndexFile(entry.filename, undefined, { sizeBytes: 0 }).index
-            })
-            .map((entry) => ({
-              path: entry.filename,
-              sha: entry.sha,
-              status: entry.status,
-              previousPath: entry.previousFilename,
-            }))
+          let diff: Awaited<ReturnType<typeof ghClient.compareCommits>> | null = null
+          try {
+            diff = await ghClient.compareCommits(owner, repoName, repo.lastIndexedCommit!, headBranch)
+          } catch {
+            console.warn(
+              `Compare failed for ${repo.fullName} (commit ${repo.lastIndexedCommit} may no longer exist). Falling back to full re-index.`,
+            )
+          }
+
+          if (diff) {
+            filesToProcess = diff
+              .filter((entry) => {
+                if (entry.status === 'removed') return true
+                return shouldIndexFile(entry.filename, undefined, { sizeBytes: 0 }).index
+              })
+              .map((entry) => ({
+                path: entry.filename,
+                sha: entry.sha,
+                status: entry.status,
+                previousPath: entry.previousFilename,
+              }))
+          } else {
+            await storage.bulkInvalidateCache(repoId)
+            const fileTree = await ghClient.getFileTree(owner, repoName, headBranch)
+            if (fileTree.length > 0 && fileTree[0].sha) {
+              headCommitSha = fileTree[0].sha
+            }
+            filesToProcess = fileTree
+              .filter((entry) => shouldIndexFile(entry.path, undefined, { sizeBytes: entry.size }).index)
+              .map((entry) => ({ path: entry.path, sha: entry.sha, status: 'added' as const }))
+          }
         }
       }
 

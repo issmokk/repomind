@@ -84,6 +84,8 @@ export function OverviewTab({ repo, latestJob, mutateRepo, mutateJob }: Overview
     { refreshInterval: 60_000, dedupingInterval: 30_000 },
   );
   const commitsBehind = freshness?.behind ?? null;
+  const isStale = freshness?.stale === true;
+  const showUpdateButton = (commitsBehind !== null && commitsBehind > 0) || isStale;
 
   const stats = [
     { label: 'Files Indexed', value: formatNumber(latestJob?.totalFiles ?? 0) },
@@ -153,10 +155,12 @@ export function OverviewTab({ repo, latestJob, mutateRepo, mutateJob }: Overview
       </Card>
 
       <div className="flex items-center gap-2">
-        {commitsBehind !== null && commitsBehind > 0 && (
+        {showUpdateButton && (
           <Button onClick={handleReindex} disabled={reindexing} variant="default">
             <ArrowUpCircle className={`size-4 ${reindexing ? 'animate-spin' : ''}`} />
-            Update Index ({commitsBehind} commit{commitsBehind !== 1 ? 's' : ''} behind)
+            {isStale
+              ? 'Full Re-index (stale commit)'
+              : `Update Index (${commitsBehind} commit${commitsBehind !== 1 ? 's' : ''} behind)`}
           </Button>
         )}
         <Button onClick={handleReindex} disabled={reindexing} variant="outline">

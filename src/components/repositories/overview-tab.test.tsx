@@ -182,6 +182,13 @@ describe('OverviewTab', () => {
     expect(mutateJob).toHaveBeenCalled();
   });
 
+  it('shows "Full Re-index" button when commit is stale', () => {
+    mockSWRData = { behind: null, stale: true } as never;
+    render(<OverviewTab {...defaultProps} />);
+    expect(screen.getByRole('button', { name: /full re-index/i })).toBeInTheDocument();
+    expect(screen.getByText(/stale commit/)).toBeInTheDocument();
+  });
+
   it('uses singular "commit" for 1 behind', () => {
     mockSWRData = { behind: 1 };
     render(<OverviewTab {...defaultProps} />);

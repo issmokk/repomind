@@ -73,8 +73,20 @@ describe('GET /api/repos/[id]/freshness', () => {
     expect(mockGetCommitsBehind).not.toHaveBeenCalled()
   })
 
-  it('returns 502 when GitHub API fails', async () => {
-    mockGetCommitsBehind.mockRejectedValueOnce(new Error('GitHub API error 500'))
+  it('returns stale: true when commit no longer exists (404)', async () => {
+    mockGetCommitsBehind.mockRejectedValueOnce(
+      new Error('Repository not found or not accessible with current credentials'),
+    )
+    const res = await callGet()
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data.stale).toBe(true)
+    expect(data.behind).toBeNull()
+    expect(data.lastIndexedCommit).toBe('abc1234')
+  })
+
+  it('returns 502 when GitHub API fails with non-404 error', async () => {
+    mockGetCommitsBehind.mockRejectedValueOnce(new Error('GitHub API error 500: internal'))
     const res = await callGet()
     expect(res.status).toBe(502)
   })

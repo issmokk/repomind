@@ -3,9 +3,10 @@ import { getRepoContext } from '../../_helpers'
 import { createGitHubAuth, GitHubClient } from '@/lib/github'
 
 export type FreshnessResponse = {
-  behind: number
-  lastIndexedCommit: string
-  headSha: string
+  behind: number | null
+  lastIndexedCommit: string | null
+  headSha: string | null
+  stale?: boolean
 }
 
 export async function GET(
@@ -35,7 +36,16 @@ export async function GET(
       lastIndexedCommit: repo.lastIndexedCommit,
       headSha: result.headSha,
     } satisfies FreshnessResponse)
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : ''
+    if (message.includes('not found') || message.includes('Not Found')) {
+      return NextResponse.json({
+        behind: null,
+        lastIndexedCommit: repo.lastIndexedCommit,
+        headSha: null,
+        stale: true,
+      } satisfies FreshnessResponse)
+    }
     return NextResponse.json(
       { error: 'Failed to check freshness against GitHub' },
       { status: 502 },

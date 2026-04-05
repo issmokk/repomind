@@ -139,6 +139,24 @@ describe('index-repo Inngest function', () => {
       expect(mockGhClient.compareCommits).toHaveBeenCalledWith('owner', 'repo', 'abc123', 'main')
     })
 
+    it('falls back to full re-index when compareCommits fails (stale commit)', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      mockStorage.getRepository.mockResolvedValue({
+        ...baseRepo,
+        lastIndexedCommit: 'stale-sha',
+      })
+      mockGhClient.compareCommits.mockRejectedValue(
+        new Error('Repository not found or not accessible with current credentials'),
+      )
+
+      await runFunction({ triggerType: 'webhook' })
+      expect(mockGhClient.compareCommits).toHaveBeenCalled()
+      expect(mockGhClient.getFileTree).toHaveBeenCalledWith('owner', 'repo', 'main')
+      expect(mockStorage.bulkInvalidateCache).toHaveBeenCalledWith('repo-1')
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Falling back to full re-index'))
+      warnSpy.mockRestore()
+    })
+
     it('does full scan on manual trigger even when lastIndexedCommit exists', async () => {
       mockStorage.getRepository.mockResolvedValue({
         ...baseRepo,

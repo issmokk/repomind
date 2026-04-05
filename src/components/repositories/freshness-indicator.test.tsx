@@ -109,6 +109,21 @@ describe('FreshnessIndicator', () => {
     expect(screen.getByText('1 commit behind HEAD')).toBeInTheDocument();
   });
 
+  it('shows stale commit warning when stale flag is set', () => {
+    mockUseSWR.mockReturnValue({
+      data: { behind: null, lastIndexedCommit: 'abc1234', headSha: null, stale: true },
+      error: undefined,
+      isLoading: false,
+      isValidating: false,
+      mutate: vi.fn(),
+    });
+
+    render(<FreshnessIndicator repoId="repo-1" lastIndexedCommit="abc1234def5678" />);
+    expect(screen.getByText('abc1234')).toBeInTheDocument();
+    expect(screen.getByText(/commit no longer exists/i)).toBeInTheDocument();
+    expect(screen.getByText(/commit no longer exists/i).closest('div')).toHaveClass('text-orange-600');
+  });
+
   it('fetches the correct API endpoint', () => {
     mockUseSWR.mockReturnValue({
       data: undefined,
