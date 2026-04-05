@@ -5,7 +5,7 @@ import { useRepos } from '@/hooks/use-repos';
 import { RepoList } from '@/components/repositories/repo-list';
 
 export default function RepositoriesPage() {
-  const { repos, isLoading, addRepo, deleteRepo } = useRepos();
+  const { repos, isLoading, addRepo, triggerIndex, deleteRepo } = useRepos();
 
   async function handleReindex(id: string) {
     try {
@@ -23,6 +23,7 @@ export default function RepositoriesPage() {
         repos={repos}
         isLoading={isLoading}
         onAdd={addRepo}
+        onTriggerIndex={triggerIndex}
         onReindex={handleReindex}
         onDelete={(id) => deleteRepo(id)}
       />

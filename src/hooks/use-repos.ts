@@ -10,7 +10,7 @@ export type RepoWithStatus = Repository & { latestJobStatus: IndexingJobStatus |
 export function useRepos() {
   const { data, error, isLoading, mutate } = useSWR<RepoWithStatus[]>('/api/repos', fetcher);
 
-  async function addRepo(fullName: string) {
+  async function addRepo(fullName: string): Promise<string> {
     const res = await fetch('/api/repos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -20,7 +20,21 @@ export function useRepos() {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.error || 'Failed to add repository');
     }
+    const repo = await res.json();
     await mutate();
+    return repo.id;
+  }
+
+  async function triggerIndex(repoId: string) {
+    const res = await fetch(`/api/repos/${repoId}/index`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trigger: 'manual' }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || 'Failed to start indexing');
+    }
   }
 
   async function deleteRepo(id: string) {
@@ -34,5 +48,5 @@ export function useRepos() {
     );
   }
 
-  return { repos: data ?? [], isLoading, error, mutate, addRepo, deleteRepo };
+  return { repos: data ?? [], isLoading, error, mutate, addRepo, triggerIndex, deleteRepo };
 }
