@@ -38,7 +38,7 @@ export function RepoDetailTabs({
         <OverviewTab repo={repo} latestJob={latestJob} mutateRepo={mutateRepo} mutateJob={mutateJob} />
       </TabsContent>
       <TabsContent value="indexing">
-        <IndexingTab repoId={repo.id} initialJob={latestJob} />
+        <IndexingTab repoId={repo.id} initialJob={latestJob} hasLastIndexedCommit={!!repo.lastIndexedCommit} />
       </TabsContent>
       <TabsContent value="settings">
         {settings ? (

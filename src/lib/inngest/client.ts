@@ -1,9 +1,12 @@
 import { Inngest, eventType } from 'inngest'
 
+export type IndexMode = 'update' | 'full'
+
 export type RepoIndexEventData = {
   repoId: string
   jobId: string
   triggerType: 'manual' | 'webhook' | 'install'
+  indexMode?: IndexMode
   changedFiles?: string[]
   retryFiles?: string[]
 }
