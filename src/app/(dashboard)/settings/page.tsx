@@ -37,6 +37,9 @@ export default function SettingsPage() {
     cohereApiKey: settings?.cohereApiKey ?? '',
     geminiApiKey: settings?.geminiApiKey ?? '',
     geminiModel: settings?.geminiModel ?? '',
+    ollamaModel: settings?.ollamaModel ?? '',
+    openaiModel: settings?.openaiModel ?? '',
+    geminiEmbeddingModel: settings?.geminiEmbeddingModel ?? '',
     ...configValues,
   }
 
