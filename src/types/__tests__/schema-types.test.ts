@@ -160,6 +160,7 @@ describe('Schema Types', () => {
         processedFiles: 0,
         failedFiles: 0,
         currentFile: null,
+        currentStage: null,
         errorLog: [],
         lastHeartbeatAt: '2026-01-01T00:00:00Z',
         startedAt: '2026-01-01T00:00:00Z',

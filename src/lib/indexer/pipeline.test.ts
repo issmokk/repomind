@@ -44,7 +44,7 @@ function mockStorage(overrides: Record<string, unknown> = {}) {
     createJob: fn(async (data: Record<string, unknown>) => ({
       id: 'job-1', repoId: data.repoId, status: 'pending', triggerType: data.triggerType,
       fromCommit: null, toCommit: 'main', totalFiles: 0, processedFiles: 0,
-      failedFiles: 0, currentFile: null, errorLog: [filesEntry],
+      failedFiles: 0, currentFile: null, currentStage: null, errorLog: [filesEntry],
       lastHeartbeatAt: new Date().toISOString(), startedAt: new Date().toISOString(), completedAt: null,
     })),
     updateJobStatus: fn(async () => {}),
@@ -143,7 +143,7 @@ describe('processNextBatch', () => {
   const activeJob: IndexingJob = {
     id: 'job-1', repoId: 'repo-1', status: 'processing', triggerType: 'manual',
     fromCommit: null, toCommit: 'main', totalFiles: 3, processedFiles: 0,
-    failedFiles: 0, currentFile: null, errorLog: [filesEntry],
+    failedFiles: 0, currentFile: null, currentStage: null, errorLog: [filesEntry],
     lastHeartbeatAt: new Date().toISOString(), startedAt: new Date().toISOString(), completedAt: null,
   }
 

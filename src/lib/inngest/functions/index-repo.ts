@@ -6,7 +6,7 @@ import { GitHubClient, PersonalAccessTokenAuth, GitHubFileCache } from '@/lib/gi
 import { createEmbeddingProvider } from '@/lib/indexer/embedding'
 import { processBatchOfFiles, getAdaptiveBatchSize, PipelineError } from '@/lib/indexer/pipeline'
 import { shouldIndexFile } from '@/lib/indexer/file-filter'
-import type { FileToProcess } from '@/types/indexing'
+import type { FileToProcess, PipelineStage } from '@/types/indexing'
 
 function createServiceClient() {
   return createClient(
@@ -144,15 +144,20 @@ export const indexRepoFunction = inngest.createFunction(
         })
 
         const fileTree = filesToProcess.map((f) => f.path)
+        const onStageChange = async (file: string, stage: PipelineStage) => {
+          await storage.updateJobProgress(jobId, { currentFile: file, currentStage: stage })
+        }
         const result = await processBatchOfFiles(
           batch, repoId, storage, ghClient, fileCache, embeddingProvider,
           { owner, repoName, defaultBranch, fileTree },
+          onStageChange,
         )
 
         await storage.updateJobProgress(jobId, {
           processedFiles: prevProcessed + result.processed,
           failedFiles: prevFailed + result.failed,
           currentFile: batch[batch.length - 1]?.path ?? null,
+          currentStage: null,
         })
 
         return result
@@ -170,6 +175,7 @@ export const indexRepoFunction = inngest.createFunction(
       await storage.updateJobStatus(jobId, finalStatus, {
         completedAt: new Date().toISOString(),
         errorLog: allErrors,
+        currentStage: null,
       })
 
       await storage.updateRepository(repoId, { lastIndexedCommit: headCommitSha })

@@ -8,6 +8,7 @@ import type {
   StartJobOptions,
   FileToProcess,
   ChunkUpsert,
+  PipelineStage,
 } from '@/types/indexing'
 import type { Repository } from '@/types/repository'
 import { shouldIndexFile } from './file-filter'
@@ -26,6 +27,8 @@ export class PipelineError extends Error {
   }
 }
 
+export type StageChangeCallback = (file: string, stage: PipelineStage) => Promise<void>
+
 export type BatchResult = {
   processed: number
   failed: number
@@ -40,6 +43,7 @@ export async function processBatchOfFiles(
   fileCache: GitHubFileCache,
   embeddingProvider: EmbeddingProvider,
   context: { owner: string; repoName: string; defaultBranch: string; fileTree: string[] },
+  onStageChange?: StageChangeCallback,
 ): Promise<BatchResult> {
   let processed = 0
   let failed = 0
@@ -64,6 +68,8 @@ export async function processBatchOfFiles(
         await storage.deleteEdgesByFile(repoId, file.path)
       }
 
+      await onStageChange?.(file.path, 'fetching_content')
+
       let content
       try {
         content = await fileCache.fetchOrCacheFile(
@@ -74,6 +80,8 @@ export async function processBatchOfFiles(
         const causeMsg = cause instanceof Error ? cause.message : String(cause ?? '')
         throw new Error(`[file-fetch] ${(fetchErr as Error).message}${causeMsg ? ` cause: ${causeMsg}` : ''}`)
       }
+
+      await onStageChange?.(file.path, 'parsing')
 
       const language = detectLanguage(file.path) ?? 'unknown'
 
@@ -92,6 +100,8 @@ export async function processBatchOfFiles(
       const chunks = await chunkFile(content.content, symbols, file.path, language)
 
       if (chunks.length > 0) {
+        await onStageChange?.(file.path, 'embedding')
+
         const contextTexts = chunks.map((c) => c.contextualizedContent)
         let embeddings: number[][]
         try {
@@ -118,6 +128,8 @@ export async function processBatchOfFiles(
           embedding: embeddings[i] ?? null,
           embeddingModel: embeddingProvider.name,
         }))
+
+        await onStageChange?.(file.path, 'storing')
 
         try {
           await storage.upsertChunks(chunkUpserts)

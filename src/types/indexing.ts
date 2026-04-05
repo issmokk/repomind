@@ -20,6 +20,12 @@ export type JobLogEntry = {
   error?: string
 }
 
+export type PipelineStage =
+  | 'fetching_content'
+  | 'parsing'
+  | 'embedding'
+  | 'storing'
+
 export type IndexingJob = {
   id: string
   repoId: string
@@ -31,6 +37,7 @@ export type IndexingJob = {
   processedFiles: number
   failedFiles: number
   currentFile: string | null
+  currentStage: PipelineStage | null
   errorLog: JobLogEntry[]
   lastHeartbeatAt: string | null
   startedAt: string | null
@@ -45,6 +52,7 @@ export type JobProgressUpdate = {
   processedFiles?: number
   failedFiles?: number
   currentFile?: string | null
+  currentStage?: PipelineStage | null
 }
 
 export type CodeChunk = {
