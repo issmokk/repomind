@@ -34,6 +34,15 @@ describe('GitHubClient', () => {
     expect(result.defaultBranch).toBe('main')
   })
 
+  it('getBranchHeadSha returns the commit SHA for a branch', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(
+      mockFetchResponse({ object: { sha: 'abc123commit' } }),
+    )))
+
+    const result = await client.getBranchHeadSha('owner', 'repo', 'main')
+    expect(result).toBe('abc123commit')
+  })
+
   it('getFileTree returns recursive file list', async () => {
     vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(
       mockFetchResponse({

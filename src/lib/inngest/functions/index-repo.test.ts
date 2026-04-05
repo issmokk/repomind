@@ -24,6 +24,7 @@ vi.mock('@/lib/storage/supabase', () => ({
 
 const mockGhClient = {
   getRepoMetadata: vi.fn(),
+  getBranchHeadSha: vi.fn(),
   getFileTree: vi.fn(),
   compareCommits: vi.fn(),
 }
@@ -90,6 +91,7 @@ describe('index-repo Inngest function', () => {
     mockStorage.updateRepository.mockResolvedValue(undefined)
 
     mockGhClient.getRepoMetadata.mockResolvedValue({ defaultBranch: 'main' })
+    mockGhClient.getBranchHeadSha.mockResolvedValue('commit-sha-123')
     mockGhClient.getFileTree.mockResolvedValue([
       { path: 'src/index.ts', sha: 'abc', size: 100 },
       { path: 'src/app.ts', sha: 'def', size: 200 },
@@ -238,7 +240,7 @@ describe('index-repo Inngest function', () => {
     it('updates repository.last_indexed_commit to HEAD commit SHA', async () => {
       await runFunction()
       expect(mockStorage.updateRepository).toHaveBeenCalledWith('repo-1', {
-        lastIndexedCommit: 'abc',
+        lastIndexedCommit: 'commit-sha-123',
       })
     })
   })

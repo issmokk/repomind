@@ -41,15 +41,12 @@ export const indexRepoFunction = inngest.createFunction(
       const headBranch = repo.defaultBranch || metadata.defaultBranch
 
       let filesToProcess: FileToProcess[]
-      let headCommitSha: string = headBranch
+      const headCommitSha = await ghClient.getBranchHeadSha(owner, repoName, headBranch)
 
       if (retryFiles && retryFiles.length > 0) {
         await storage.updateJobStatus(jobId, 'fetching_files')
 
         const fileTree = await ghClient.getFileTree(owner, repoName, headBranch)
-        if (fileTree.length > 0 && fileTree[0].sha) {
-          headCommitSha = fileTree[0].sha
-        }
 
         const retrySet = new Set(retryFiles)
         filesToProcess = fileTree
@@ -64,9 +61,6 @@ export const indexRepoFunction = inngest.createFunction(
           await storage.updateJobStatus(jobId, 'fetching_files')
 
           const fileTree = await ghClient.getFileTree(owner, repoName, headBranch)
-          if (fileTree.length > 0 && fileTree[0].sha) {
-            headCommitSha = fileTree[0].sha
-          }
 
           filesToProcess = fileTree
             .filter((entry) => shouldIndexFile(entry.path, undefined, { sizeBytes: entry.size }).index)
@@ -98,9 +92,6 @@ export const indexRepoFunction = inngest.createFunction(
           } else {
             await storage.bulkInvalidateCache(repoId)
             const fileTree = await ghClient.getFileTree(owner, repoName, headBranch)
-            if (fileTree.length > 0 && fileTree[0].sha) {
-              headCommitSha = fileTree[0].sha
-            }
             filesToProcess = fileTree
               .filter((entry) => shouldIndexFile(entry.path, undefined, { sizeBytes: entry.size }).index)
               .map((entry) => ({ path: entry.path, sha: entry.sha, status: 'added' as const }))

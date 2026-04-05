@@ -25,6 +25,13 @@ export class GitHubClient {
     }
   }
 
+  async getBranchHeadSha(owner: string, repo: string, branch: string): Promise<string> {
+    const data = await this.request<{ object: { sha: string } }>(
+      `/repos/${owner}/${repo}/git/ref/heads/${branch}`,
+    )
+    return data.object.sha
+  }
+
   async getFileTree(owner: string, repo: string, sha: string): Promise<FileTreeEntry[]> {
     const data = await this.request<{
       truncated: boolean
