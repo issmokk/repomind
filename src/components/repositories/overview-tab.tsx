@@ -2,13 +2,16 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { RefreshCw, Trash2, ExternalLink } from 'lucide-react';
+import useSWR from 'swr';
+import { RefreshCw, Trash2, ExternalLink, ArrowUpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { ConfirmationDialog } from '@/components/shared/confirmation-dialog';
+import { FreshnessIndicator } from './freshness-indicator';
 import { mapJobStatus } from '@/lib/status-utils';
+import type { FreshnessResponse } from '@/app/api/repos/[id]/freshness/route';
 import type { Repository } from '@/types/repository';
 import type { IndexingJob } from '@/types/indexing';
 import type { KeyedMutator } from 'swr';
@@ -74,14 +77,18 @@ export function OverviewTab({ repo, latestJob, mutateRepo, mutateJob }: Overview
     }
   }
 
+  const fetcher = (url: string) => fetch(url).then((r) => r.json());
+  const { data: freshness } = useSWR<FreshnessResponse>(
+    repo.lastIndexedCommit ? `/api/repos/${repo.id}/freshness` : null,
+    fetcher,
+    { refreshInterval: 60_000, dedupingInterval: 30_000 },
+  );
+  const commitsBehind = freshness?.behind ?? null;
+
   const stats = [
     { label: 'Files Indexed', value: formatNumber(latestJob?.totalFiles ?? 0) },
     { label: 'Chunks Created', value: formatNumber(latestJob?.processedFiles ?? 0) },
-    {
-      label: 'Last Indexed Commit',
-      value: repo.lastIndexedCommit ? repo.lastIndexedCommit.slice(0, 7) : 'Never',
-      mono: true,
-    },
+    { label: 'Index Freshness', freshness: true },
     { label: 'Status', badge: true },
   ];
 
@@ -96,8 +103,15 @@ export function OverviewTab({ repo, latestJob, mutateRepo, mutateJob }: Overview
                 <div className="mt-1">
                   <StatusBadge status={mapJobStatus(latestJob?.status)} />
                 </div>
+              ) : stat.freshness ? (
+                <div className="mt-1">
+                  <FreshnessIndicator
+                    repoId={repo.id}
+                    lastIndexedCommit={repo.lastIndexedCommit}
+                  />
+                </div>
               ) : (
-                <p className={`text-lg font-semibold ${stat.mono ? 'font-mono text-sm' : ''}`}>
+                <p className="text-lg font-semibold">
                   {stat.value}
                 </p>
               )}
@@ -139,7 +153,13 @@ export function OverviewTab({ repo, latestJob, mutateRepo, mutateJob }: Overview
       </Card>
 
       <div className="flex items-center gap-2">
-        <Button onClick={handleReindex} disabled={reindexing}>
+        {commitsBehind !== null && commitsBehind > 0 && (
+          <Button onClick={handleReindex} disabled={reindexing} variant="default">
+            <ArrowUpCircle className={`size-4 ${reindexing ? 'animate-spin' : ''}`} />
+            Update Index ({commitsBehind} commit{commitsBehind !== 1 ? 's' : ''} behind)
+          </Button>
+        )}
+        <Button onClick={handleReindex} disabled={reindexing} variant="outline">
           <RefreshCw className={`size-4 ${reindexing ? 'animate-spin' : ''}`} />
           Re-index
         </Button>
