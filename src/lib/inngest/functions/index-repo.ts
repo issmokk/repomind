@@ -25,7 +25,7 @@ export const indexRepoFunction = inngest.createFunction(
     triggers: [{ event: 'repo/index' }],
   },
   async ({ event, step }) => {
-    const { repoId, jobId, triggerType, retryFiles } = event.data as RepoIndexEventData
+    const { repoId, jobId, triggerType, indexMode, retryFiles } = event.data as RepoIndexEventData
 
     const initResult = await step.run('initialize', async () => {
       const storage = new SupabaseStorageProvider()
@@ -56,7 +56,9 @@ export const indexRepoFunction = inngest.createFunction(
           .filter((entry) => retrySet.has(entry.path))
           .map((entry) => ({ path: entry.path, sha: entry.sha, status: 'modified' as const }))
       } else {
-        const useFullIndex = !repo.lastIndexedCommit || triggerType === 'manual'
+        const useFullIndex = !repo.lastIndexedCommit
+          || indexMode === 'full'
+          || (!indexMode && triggerType === 'manual')
         if (useFullIndex) {
           await storage.bulkInvalidateCache(repoId)
           await storage.updateJobStatus(jobId, 'fetching_files')

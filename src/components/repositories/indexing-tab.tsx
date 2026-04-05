@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Play, Square, AlertTriangle, ChevronDown, ChevronRight, RotateCcw, RefreshCw } from 'lucide-react';
+import { Play, Square, AlertTriangle, ChevronDown, ChevronRight, RotateCcw, RefreshCw, ArrowUpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,12 +46,15 @@ function formatDuration(startedAt: string | null, endedAt?: string | null): stri
   return `${mins}m ${remainSecs}s`;
 }
 
+type IndexAction = 'update' | 'full' | 'retry';
+
 interface IndexingTabProps {
   repoId: string;
   initialJob?: IndexingJob | null;
+  hasLastIndexedCommit?: boolean;
 }
 
-export function IndexingTab({ repoId, initialJob }: IndexingTabProps) {
+export function IndexingTab({ repoId, initialJob, hasLastIndexedCommit = false }: IndexingTabProps) {
   const { job: liveJob, isConnected } = useIndexingStatus(repoId);
   const job = liveJob ?? initialJob ?? null;
   const active = job ? isActive(job.status) : false;
@@ -72,13 +75,17 @@ export function IndexingTab({ repoId, initialJob }: IndexingTabProps) {
     return () => clearInterval(timer);
   }, [active, job?.startedAt]);
 
-  async function triggerIndex(options: { retryFailed?: boolean } = {}) {
+  async function triggerIndex(action: IndexAction = 'full') {
     setStarting(true);
     try {
+      const body: Record<string, unknown> = { trigger: 'manual' };
+      if (action === 'retry') body.retryFailed = true;
+      else body.mode = action;
+
       const res = await fetch(`/api/repos/${repoId}/index`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trigger: 'manual', ...options }),
+        body: JSON.stringify(body),
       });
       if (res.status === 409) {
         toast.error('Indexing is already in progress');
@@ -89,7 +96,12 @@ export function IndexingTab({ repoId, initialJob }: IndexingTabProps) {
         toast.error(data.error ?? 'Failed to start indexing');
         return;
       }
-      toast.success(options.retryFailed ? 'Retrying failed files' : 'Indexing started');
+      const labels: Record<IndexAction, string> = {
+        update: 'Updating index',
+        full: 'Full re-index started',
+        retry: 'Retrying failed files',
+      };
+      toast.success(labels[action]);
     } catch {
       toast.error('Failed to start indexing');
     } finally {
@@ -114,6 +126,23 @@ export function IndexingTab({ repoId, initialJob }: IndexingTabProps) {
   }
 
   const canRetryFailed = !active && job?.status === 'partial' && job.failedFiles > 0;
+  const canUpdate = hasLastIndexedCommit;
+
+  const defaultAction: IndexAction = canRetryFailed ? 'retry'
+    : canUpdate ? 'update'
+    : 'full';
+
+  const actionLabels: Record<IndexAction, string> = {
+    update: 'Update Index',
+    full: 'Full Re-index',
+    retry: `Retry Failed (${job?.failedFiles ?? 0})`,
+  };
+
+  const actionIcons: Record<IndexAction, typeof Play> = {
+    update: ArrowUpCircle,
+    full: RefreshCw,
+    retry: RotateCcw,
+  };
 
   const percentage = job && job.totalFiles > 0
     ? Math.round((job.processedFiles / job.totalFiles) * 100)
@@ -129,38 +158,43 @@ export function IndexingTab({ repoId, initialJob }: IndexingTabProps) {
             title={isConnected ? 'Connected' : 'Disconnected'}
           />
         </div>
-        {!active && (
-          <div className="flex items-center gap-1">
-            <Button onClick={() => triggerIndex()} disabled={starting} size="sm">
-              <Play className="size-3.5" />
-              {starting ? 'Starting...' : 'Start Indexing'}
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className="inline-flex h-8 items-center justify-center rounded-md border bg-background px-1.5 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
-                disabled={starting}
-              >
-                <ChevronDown className="size-3.5" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => triggerIndex()}>
-                  <Play className="size-3.5" />
-                  Start Indexing
-                </DropdownMenuItem>
-                {canRetryFailed && (
-                  <DropdownMenuItem onClick={() => triggerIndex({ retryFailed: true })}>
-                    <RotateCcw className="size-3.5" />
-                    Retry Failed ({job?.failedFiles})
+        {!active && (() => {
+          const DefaultIcon = actionIcons[defaultAction];
+          return (
+            <div className="flex items-center gap-1">
+              <Button onClick={() => triggerIndex(defaultAction)} disabled={starting} size="sm">
+                <DefaultIcon className="size-3.5" />
+                {starting ? 'Starting...' : actionLabels[defaultAction]}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="inline-flex h-8 items-center justify-center rounded-md border bg-background px-1.5 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+                  disabled={starting}
+                >
+                  <ChevronDown className="size-3.5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {canUpdate && (
+                    <DropdownMenuItem onClick={() => triggerIndex('update')}>
+                      <ArrowUpCircle className="size-3.5" />
+                      Update Index
+                    </DropdownMenuItem>
+                  )}
+                  {canRetryFailed && (
+                    <DropdownMenuItem onClick={() => triggerIndex('retry')}>
+                      <RotateCcw className="size-3.5" />
+                      Retry Failed ({job?.failedFiles})
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => triggerIndex('full')}>
+                    <RefreshCw className="size-3.5" />
+                    Full Re-index
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={() => triggerIndex()}>
-                  <RefreshCw className="size-3.5" />
-                  Full Re-index
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        })()}
         {active && (
           <Button variant="destructive" onClick={handleCancel} disabled={cancelling} size="sm">
             <Square className="size-3.5" />

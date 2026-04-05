@@ -40,9 +40,14 @@ beforeEach(() => {
 });
 
 describe('IndexingTab', () => {
-  it('shows "Start Indexing" button when no job active', () => {
+  it('shows "Full Re-index" as default when repo never indexed', () => {
     render(<IndexingTab repoId="repo-1" />);
-    expect(screen.getByRole('button', { name: /start indexing/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /full re-index/i })).toBeInTheDocument();
+  });
+
+  it('shows "Update Index" as default when repo has been indexed', () => {
+    render(<IndexingTab repoId="repo-1" hasLastIndexedCommit />);
+    expect(screen.getByRole('button', { name: /update index/i })).toBeInTheDocument();
   });
 
   it('shows progress bar with percentage when job active', async () => {
@@ -97,7 +102,27 @@ describe('IndexingTab', () => {
     expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
   });
 
-  it('start indexing button calls POST endpoint', async () => {
+  it('default button calls POST with correct mode', async () => {
+    const { useIndexingStatus } = await import('@/hooks/use-indexing-status');
+    vi.mocked(useIndexingStatus).mockReturnValue({
+      job: null,
+      isConnected: true,
+    });
+
+    const user = userEvent.setup();
+    render(<IndexingTab repoId="repo-1" hasLastIndexedCommit />);
+
+    await user.click(screen.getByRole('button', { name: /update index/i }));
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/repos/repo-1/index',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ trigger: 'manual', mode: 'update' }),
+      }),
+    );
+  });
+
+  it('full re-index sends mode=full', async () => {
     const { useIndexingStatus } = await import('@/hooks/use-indexing-status');
     vi.mocked(useIndexingStatus).mockReturnValue({
       job: null,
@@ -107,10 +132,13 @@ describe('IndexingTab', () => {
     const user = userEvent.setup();
     render(<IndexingTab repoId="repo-1" />);
 
-    await user.click(screen.getByRole('button', { name: /start indexing/i }));
+    await user.click(screen.getByRole('button', { name: /full re-index/i }));
     expect(global.fetch).toHaveBeenCalledWith(
       '/api/repos/repo-1/index',
-      expect.objectContaining({ method: 'POST' }),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ trigger: 'manual', mode: 'full' }),
+      }),
     );
   });
 

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getRepoContext } from '../../_helpers'
 import { inngest } from '@/lib/inngest/client'
+import type { IndexMode } from '@/lib/inngest/client'
 
 export async function DELETE(
   _request: NextRequest,
@@ -44,6 +45,7 @@ export async function POST(
   const body = await request.json().catch(() => ({}))
   const triggerType = body.trigger === 'git_diff' ? 'webhook' : 'manual'
   const retryFailed = body.retryFailed === true
+  const indexMode: IndexMode | undefined = body.mode === 'update' || body.mode === 'full' ? body.mode : undefined
 
   let retryFiles: string[] | undefined
   if (retryFailed) {
@@ -73,6 +75,7 @@ export async function POST(
         repoId: id,
         jobId: job.id,
         triggerType: triggerType as 'manual' | 'webhook',
+        ...(indexMode && { indexMode }),
         ...(retryFiles && { retryFiles }),
       },
     })
