@@ -1,1 +1,185 @@
-[]
+[
+  {
+    "question": "What are the chunk size constants used by the semantic chunker?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/indexer/chunker.ts", "lineStart": 1, "lineEnd": 50 }
+    ],
+    "expectedAnswerContains": ["TARGET_MIN_NWS", "TARGET_MAX_NWS", "1000", "2000", "MERGE_THRESHOLD_NWS", "OVERLAP_LINES"]
+  },
+  {
+    "question": "How does the chunkFile function work? Walk me through the chunking pipeline.",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/indexer/chunker.ts", "lineStart": 1, "lineEnd": 259 }
+    ],
+    "expectedAnswerContains": ["buildScopeTree", "packChunks", "mergeSmallChunks", "addOverlap", "slidingWindowRaw", "symbols"]
+  },
+  {
+    "question": "What types of symbols does the AST analyzer extract?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/indexer/ast-analyzer.ts", "lineStart": 1, "lineEnd": 50 }
+    ],
+    "expectedAnswerContains": ["function", "method", "class", "module", "interface", "type_alias", "SymbolType"]
+  },
+  {
+    "question": "How does the import resolver handle TypeScript relative imports?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/indexer/import-resolver.ts", "lineStart": 1, "lineEnd": 62 }
+    ],
+    "expectedAnswerContains": ["resolveImport", ".ts", ".tsx", "index.ts", "isExternal", "packageName"]
+  },
+  {
+    "question": "What relationship types does buildGraphEdges create from AST analysis results?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/indexer/graph-builder.ts", "lineStart": 1, "lineEnd": 128 }
+    ],
+    "expectedAnswerContains": ["external_dep", "imports", "calls", "inherits", "composes"]
+  },
+  {
+    "question": "Explain how the query analyzer classifies questions into different types.",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/rag/query-analyzer.ts", "lineStart": 1, "lineEnd": 110 }
+    ],
+    "expectedAnswerContains": ["factual", "architectural", "debugging", "explanation", "suggestedGraphDepth"]
+  },
+  {
+    "question": "What regex patterns does the query analyzer use to detect architectural questions?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/rag/query-analyzer.ts", "lineStart": 1, "lineEnd": 45 }
+    ],
+    "expectedAnswerContains": ["ARCHITECTURAL_PATTERNS", "dependenc", "call chain", "call graph", "architecture", "flow between"]
+  },
+  {
+    "question": "How does the hybrid search work in the retriever? What parameters does it accept?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/storage/supabase.ts", "lineStart": 400, "lineEnd": 450 },
+      { "filePath": "src/lib/rag/retriever.ts", "lineStart": 1, "lineEnd": 100 }
+    ],
+    "expectedAnswerContains": ["hybridSearchChunks", "hybrid_search_chunks", "queryEmbedding", "rrfK", "topK", "overfetchFactor"]
+  },
+  {
+    "question": "How does the multi-hop graph traversal work in getRelatedEdgesBatch?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/storage/supabase.ts", "lineStart": 430, "lineEnd": 520 }
+    ],
+    "expectedAnswerContains": ["hop", "depth", "fetchEdgesForSources", "hop2Sources", "seenKeys", "graph_edges"]
+  },
+  {
+    "question": "How does the prompt builder select a language-specific template?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/rag/prompt-builder.ts", "lineStart": 1, "lineEnd": 100 }
+    ],
+    "expectedAnswerContains": ["selectTemplate", "PROMPT_TEMPLATES", "majorityLang", "langCounts", "explicitLanguage"]
+  },
+  {
+    "question": "How does the buildContextWindow function assemble the final prompt with token budgeting?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/rag/prompt-builder.ts", "lineStart": 100, "lineEnd": 177 }
+    ],
+    "expectedAnswerContains": ["buildContextWindow", "tokenBudget", "estimateTokens", "primaryFormatted", "graphFormatted", "systemPrompt"]
+  },
+  {
+    "question": "What is the confidence scoring logic in the retriever?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/rag/retriever.ts", "lineStart": 1, "lineEnd": 50 }
+    ],
+    "expectedAnswerContains": ["computeConfidence", "rrfScore", "high", "medium", "low", "0.025", "0.015"]
+  },
+  {
+    "question": "What is the full data flow from a chat API request to a streamed response?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/app/api/chat/route.ts", "lineStart": 1, "lineEnd": 193 },
+      { "filePath": "src/lib/rag/retriever.ts", "lineStart": 1, "lineEnd": 172 },
+      { "filePath": "src/lib/rag/prompt-builder.ts", "lineStart": 100, "lineEnd": 177 }
+    ],
+    "expectedAnswerContains": ["analyzeQuery", "retrieveContext", "buildContextWindow", "streamText", "toUIMessageStreamResponse"]
+  },
+  {
+    "question": "How does the Inngest indexing function handle concurrency and cancellation?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/inngest/functions/index-repo.ts", "lineStart": 1, "lineEnd": 50 }
+    ],
+    "expectedAnswerContains": ["concurrency", "limit", "repoId", "cancelOn", "repo/index.cancel", "retries"]
+  },
+  {
+    "question": "What dependencies does the graph-builder module import and why?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/indexer/graph-builder.ts", "lineStart": 1, "lineEnd": 50 }
+    ],
+    "expectedAnswerContains": ["ImportInfo", "CallSiteInfo", "InheritanceInfo", "resolveImport", "GraphEdgeInsert"]
+  },
+  {
+    "question": "How does the graph builder deduplicate edges?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/indexer/graph-builder.ts", "lineStart": 80, "lineEnd": 128 }
+    ],
+    "expectedAnswerContains": ["deduplicateEdges", "seen", "sourceFile", "targetFile", "targetSymbol", "relationshipType"]
+  },
+  {
+    "question": "Where is the GitHub rate limit threshold defined and how does rate limiting work?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/github/client.ts", "lineStart": 1, "lineEnd": 50 }
+    ],
+    "expectedAnswerContains": ["RATE_LIMIT_THRESHOLD", "100", "GitHubClient"]
+  },
+  {
+    "question": "How does the GitHubClient fetch the recursive file tree and handle truncation?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/github/client.ts", "lineStart": 30, "lineEnd": 70 }
+    ],
+    "expectedAnswerContains": ["getFileTree", "recursive", "truncated", "blob", "filter"]
+  },
+  {
+    "question": "What import kinds does the AST analyzer support? Show me the ImportInfo type.",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/lib/indexer/ast-analyzer.ts", "lineStart": 1, "lineEnd": 40 }
+    ],
+    "expectedAnswerContains": ["ImportInfo", "require", "require_relative", "import", "dynamic_import", "include", "extend", "re_export"]
+  },
+  {
+    "question": "How does the chat API validate that a user has access to the requested repositories?",
+    "repoId": "",
+    "repoName": "issmokk/repomind",
+    "expectedSources": [
+      { "filePath": "src/app/api/chat/route.ts", "lineStart": 66, "lineEnd": 150 }
+    ],
+    "expectedAnswerContains": ["getRepositories", "userRepoIds", "has", "403"]
+  }
+]

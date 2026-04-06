@@ -1,6 +1,7 @@
 import { readFile } from 'fs/promises'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import type { StorageProvider } from '@/lib/storage/types'
 import {
   type EvalTestCase,
   type MetricScores,
@@ -15,6 +16,34 @@ import {
 } from './metrics'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+
+async function resolveRepoNames(
+  cases: EvalTestCase[],
+  storage: StorageProvider
+): Promise<EvalTestCase[]> {
+  const nameCache = new Map<string, string>()
+  const resolved: EvalTestCase[] = []
+
+  for (const tc of cases) {
+    if (tc.repoName && (!tc.repoId || tc.repoId === '')) {
+      let repoId = nameCache.get(tc.repoName)
+      if (!repoId) {
+        const repo = await storage.findRepositoryByFullName(tc.repoName)
+        if (!repo) {
+          console.warn(`[eval] Skipping test case: repo "${tc.repoName}" not found in database`)
+          continue
+        }
+        repoId = repo.id
+        nameCache.set(tc.repoName, repoId)
+      }
+      resolved.push({ ...tc, repoId })
+    } else {
+      resolved.push(tc)
+    }
+  }
+
+  return resolved
+}
 
 export type EvalCaseResult = {
   question: string
@@ -100,24 +129,42 @@ export async function runEvaluation(options: {
   syntheticDatasetPath?: string
   pipeline: RagPipeline
   judge: LlmJudge
+  storage?: StorageProvider
 }): Promise<EvalResults> {
   const goldenPath = options.goldenDatasetPath ?? resolve(__dirname, 'datasets/golden.json')
   const syntheticPath = options.syntheticDatasetPath ?? resolve(__dirname, 'datasets/synthetic.json')
 
-  const [golden, synthetic] = await Promise.all([
+  let [golden, synthetic] = await Promise.all([
     loadDataset(goldenPath),
     loadDataset(syntheticPath),
   ])
 
-  const goldenResults: EvalCaseResult[] = []
-  for (const testCase of golden) {
-    goldenResults.push(await evaluateCase(testCase, options.pipeline, options.judge))
+  if (options.storage) {
+    ;[golden, synthetic] = await Promise.all([
+      resolveRepoNames(golden, options.storage),
+      resolveRepoNames(synthetic, options.storage),
+    ])
   }
 
-  const syntheticResults: EvalCaseResult[] = []
-  for (const testCase of synthetic) {
-    syntheticResults.push(await evaluateCase(testCase, options.pipeline, options.judge))
+  const CONCURRENCY = 1
+
+  async function runBatch(cases: EvalTestCase[]): Promise<EvalCaseResult[]> {
+    const results: EvalCaseResult[] = new Array(cases.length)
+    let next = 0
+
+    async function worker() {
+      while (next < cases.length) {
+        const idx = next++
+        results[idx] = await evaluateCase(cases[idx], options.pipeline, options.judge)
+      }
+    }
+
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, cases.length) }, () => worker()))
+    return results
   }
+
+  const goldenResults = await runBatch(golden)
+  const syntheticResults = await runBatch(synthetic)
 
   return {
     goldenResults,
@@ -132,11 +179,16 @@ export async function runABComparison(options: {
   pipelineA: RagPipeline
   pipelineB: RagPipeline
   judge: LlmJudge
+  storage?: StorageProvider
 }): Promise<{ configA: { results: EvalCaseResult[]; summary: MetricSummary }; configB: { results: EvalCaseResult[]; summary: MetricSummary } }> {
+  const dataset = options.storage
+    ? await resolveRepoNames(options.dataset, options.storage)
+    : options.dataset
+
   const resultsA: EvalCaseResult[] = []
   const resultsB: EvalCaseResult[] = []
 
-  for (const testCase of options.dataset) {
+  for (const testCase of dataset) {
     const [a, b] = await Promise.all([
       evaluateCase(testCase, options.pipelineA, options.judge),
       evaluateCase(testCase, options.pipelineB, options.judge),
