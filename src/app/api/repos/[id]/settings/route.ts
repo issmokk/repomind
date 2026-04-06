@@ -9,6 +9,7 @@ const settingsUpdateSchema = z.object({
   embeddingProvider: z.enum(['ollama', 'openai', 'gemini']).optional(),
   embeddingModel: z.string().min(1).max(100).optional(),
   indexingMethod: z.enum(['manual', 'webhook', 'git_diff', 'cron']).optional(),
+  cronInterval: z.enum(['1h', '6h', '12h', '24h', '7d']).optional(),
   autoIndexOnAdd: z.boolean().optional(),
 }).strict()
 

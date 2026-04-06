@@ -52,6 +52,7 @@ describe('Schema Types', () => {
         embeddingProvider: 'ollama',
         embeddingModel: 'gte-qwen2-1.5b-instruct',
         indexingMethod: 'manual',
+        cronInterval: '24h',
         autoIndexOnAdd: false,
         createdAt: '2026-01-01T00:00:00Z',
         updatedAt: '2026-01-01T00:00:00Z',

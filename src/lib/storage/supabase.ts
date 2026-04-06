@@ -149,6 +149,7 @@ export class SupabaseStorageProvider implements StorageProvider {
         embedding_provider: 'gemini',
         embedding_model: 'gemini-embedding-001',
         indexing_method: 'manual',
+        cron_interval: '24h',
         auto_index_on_add: false,
       })
       .select()
@@ -184,6 +185,21 @@ export class SupabaseStorageProvider implements StorageProvider {
       .select()
       .single()
     return toCamelCase<RepositorySettings>(assertNoError(result, 'updateSettings'))
+  }
+
+  async getCronRepositories(): Promise<Array<{ repo: Repository; settings: RepositorySettings }>> {
+    const result = await this.serviceClient
+      .from('repository_settings')
+      .select('*, repositories!inner(*)')
+      .eq('indexing_method', 'cron')
+    const rows = assertNoError(result, 'getCronRepositories') ?? []
+    return rows.map((row: Record<string, unknown>) => {
+      const { repositories: repoRow, ...settingsRow } = row
+      return {
+        repo: toCamelCase<Repository>(repoRow as Record<string, unknown>),
+        settings: toCamelCase<RepositorySettings>(settingsRow),
+      }
+    })
   }
 
   async getCachedFile(repoId: string, filePath: string): Promise<CachedFile | null> {

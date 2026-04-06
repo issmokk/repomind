@@ -27,6 +27,7 @@ export type RepositorySettings = {
   embeddingProvider: string
   embeddingModel: string
   indexingMethod: IndexingMethod
+  cronInterval: string
   autoIndexOnAdd: boolean
   createdAt: string
   updatedAt: string

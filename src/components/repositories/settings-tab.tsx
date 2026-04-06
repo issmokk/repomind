@@ -12,9 +12,17 @@ import { WebhookSetupGuide } from './webhook-setup-guide';
 
 const INDEXING_METHODS = [
   { value: 'webhook', label: 'Webhook', description: 'Real-time updates. Triggers on every push. Requires GitHub webhook setup.' },
-  { value: 'cron', label: 'Cron', description: 'Scheduled polling. Checks for changes every N hours. Simpler setup.' },
+  { value: 'cron', label: 'Cron', description: 'Scheduled polling. Checks for changes at a configured interval.' },
   { value: 'manual', label: 'Manual', description: 'User-triggered only. Full control over when indexing happens.' },
   { value: 'git_diff', label: 'Git-diff incremental', description: 'Efficient. Only re-processes files changed since last index.' },
+] as const;
+
+const CRON_INTERVALS = [
+  { value: '1h', label: 'Every hour' },
+  { value: '6h', label: 'Every 6 hours' },
+  { value: '12h', label: 'Every 12 hours' },
+  { value: '24h', label: 'Every 24 hours' },
+  { value: '7d', label: 'Every 7 days' },
 ] as const;
 
 interface SettingsTabProps {
@@ -27,6 +35,7 @@ interface SettingsTabProps {
 
 export function SettingsTab({ repoId, fullName, githubAuthType, settings, mutateSettings }: SettingsTabProps) {
   const [indexingMethod, setIndexingMethod] = useState<IndexingMethod>(settings.indexingMethod);
+  const [cronInterval, setCronInterval] = useState(settings.cronInterval ?? '24h');
   const [branchFilter, setBranchFilter] = useState<string[]>(settings.branchFilter);
   const [branchInput, setBranchInput] = useState('');
   const [includePatterns, setIncludePatterns] = useState<string[]>(settings.includePatterns);
@@ -37,6 +46,7 @@ export function SettingsTab({ repoId, fullName, githubAuthType, settings, mutate
 
   const isDirty =
     indexingMethod !== settings.indexingMethod ||
+    cronInterval !== (settings.cronInterval ?? '24h') ||
     JSON.stringify(branchFilter) !== JSON.stringify(settings.branchFilter) ||
     JSON.stringify(includePatterns) !== JSON.stringify(settings.includePatterns) ||
     JSON.stringify(excludePatterns) !== JSON.stringify(settings.excludePatterns);
@@ -85,6 +95,9 @@ export function SettingsTab({ repoId, fullName, githubAuthType, settings, mutate
       if (indexingMethod !== settings.indexingMethod) {
         body.indexingMethod = indexingMethod;
       }
+      if (cronInterval !== (settings.cronInterval ?? '24h')) {
+        body.cronInterval = cronInterval;
+      }
       if (JSON.stringify(branchFilter) !== JSON.stringify(settings.branchFilter)) {
         body.branchFilter = branchFilter;
       }
@@ -111,6 +124,7 @@ export function SettingsTab({ repoId, fullName, githubAuthType, settings, mutate
       const updated = await mutateSettings();
       if (updated) {
         setIndexingMethod(updated.indexingMethod);
+        setCronInterval(updated.cronInterval ?? '24h');
         setBranchFilter(updated.branchFilter);
         setIncludePatterns(updated.includePatterns);
         setExcludePatterns(updated.excludePatterns);
@@ -128,41 +142,48 @@ export function SettingsTab({ repoId, fullName, githubAuthType, settings, mutate
         <CardContent className="space-y-4">
           <h3 className="text-sm font-medium">Indexing Method</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {INDEXING_METHODS.map((method) => {
-              const isCron = method.value === 'cron';
-              return (
-                <label
-                  key={method.value}
-                  className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
-                    isCron
-                      ? 'cursor-not-allowed opacity-50'
-                      : 'cursor-pointer'
-                  } ${
-                    indexingMethod === method.value
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/50'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="indexingMethod"
-                    value={method.value}
-                    checked={indexingMethod === method.value}
-                    onChange={(e) => setIndexingMethod(e.target.value as IndexingMethod)}
-                    disabled={isCron}
-                    className="mt-0.5"
-                  />
-                  <div>
-                    <span className="text-sm font-medium">{method.label}</span>
-                    {isCron && (
-                      <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">Coming soon</span>
-                    )}
-                    <p className="text-xs text-muted-foreground">{method.description}</p>
-                  </div>
-                </label>
-              );
-            })}
+            {INDEXING_METHODS.map((method) => (
+              <label
+                key={method.value}
+                className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
+                  indexingMethod === method.value
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/50'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="indexingMethod"
+                  value={method.value}
+                  checked={indexingMethod === method.value}
+                  onChange={(e) => setIndexingMethod(e.target.value as IndexingMethod)}
+                  className="mt-0.5"
+                />
+                <div>
+                  <span className="text-sm font-medium">{method.label}</span>
+                  <p className="text-xs text-muted-foreground">{method.description}</p>
+                </div>
+              </label>
+            ))}
           </div>
+          {indexingMethod === 'cron' && (
+            <div className="mt-3 space-y-2">
+              <label className="text-sm font-medium" htmlFor="cron-interval">Check interval</label>
+              <select
+                id="cron-interval"
+                value={cronInterval}
+                onChange={(e) => setCronInterval(e.target.value)}
+                className="block w-full max-w-xs rounded-md border border-border bg-background px-3 py-1.5 text-sm"
+              >
+                {CRON_INTERVALS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                A background job runs hourly and triggers an incremental update for repos whose interval has elapsed.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

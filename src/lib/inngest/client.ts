@@ -5,7 +5,7 @@ export type IndexMode = 'update' | 'full'
 export type RepoIndexEventData = {
   repoId: string
   jobId: string
-  triggerType: 'manual' | 'webhook' | 'install'
+  triggerType: 'manual' | 'webhook' | 'install' | 'cron'
   indexMode?: IndexMode
   changedFiles?: string[]
   retryFiles?: string[]
